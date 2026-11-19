@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-import { calculatePrice, formatKRW } from "@/lib/pricing";
 import { useBuilderStore } from "@/store";
 import { useBuilderProduct } from "@/components/builder/BuilderProductContext";
 import type { ViewSide } from "@/types/builder";
@@ -28,8 +26,6 @@ export function PreviewPanel({ onSideChange }: PreviewPanelProps) {
   const product = useBuilderProduct();
   const faces = product?.mockupFaces ?? [];
   const customSides = faces.length > 0 ? faces.map((f) => f.side) : null;
-
-  const price = useMemo(() => calculatePrice(options), [options]);
   const enabledSides = getDesignViewSides(
     options.productType,
     options.printSide,
@@ -65,15 +61,7 @@ export function PreviewPanel({ onSideChange }: PreviewPanelProps) {
       </div>
 
       <div className="rounded border border-zinc-200 p-2">
-        <p className="mb-1 font-semibold text-zinc-700">
-          견적{" "}
-          <span className="text-blue-700">{formatKRW(price.totalPrice)}</span>
-        </p>
-        <p className="text-[10px] text-zinc-500">
-          단가 {formatKRW(price.unitPrice)} × {options.quantity}개
-          {price.discountRate > 0 && ` (-${price.discountRate * 100}%)`}
-        </p>
-        <dl className="mt-1 space-y-0.5 text-[10px] text-zinc-500">
+        <dl className="space-y-0.5 text-[10px] text-zinc-500">
           <Row label="제품" value={PRODUCT_TYPE_LABELS[options.productType]} />
           <Row label="사이즈" value={options.size} />
           <Row label="원단" value={FABRIC_LABELS[options.fabric]} />

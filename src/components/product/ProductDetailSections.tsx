@@ -19,13 +19,11 @@ const CUSTOM_TABS = [
   { id: "guide", label: "제작 가이드" },
   { id: "reviews", label: "리뷰" },
   { id: "faq", label: "자주 묻는 질문" },
-  { id: "shipping", label: "배송안내" },
 ] as const;
 
 const READYMADE_TABS = [
   { id: "info", label: "상세정보" },
   { id: "reviews", label: "상품후기" },
-  { id: "shipping", label: "배송/교환/환불 안내" },
 ] as const;
 
 type TabId = (typeof CUSTOM_TABS)[number]["id"];
@@ -36,7 +34,6 @@ const SECTION_TITLES: Record<TabId, string> = {
   guide: "제작 가이드",
   reviews: "상품후기",
   faq: "자주 묻는 질문",
-  shipping: "배송/교환/환불 안내",
 };
 
 const TAB_SECTION_TYPES: Record<TabId, string[]> = {
@@ -45,7 +42,6 @@ const TAB_SECTION_TYPES: Record<TabId, string[]> = {
   guide: ["GUIDE", "SIZE"],
   reviews: [],
   faq: ["FAQ"],
-  shipping: ["SHIPPING", "CAUTION"],
 };
 
 interface ProductDetailSectionsProps {
@@ -232,7 +228,6 @@ export function ProductDetailSections({
       info: sectionsForTab(product.sections, "info"),
       guide: sectionsForTab(product.sections, "guide"),
       faq: sectionsForTab(product.sections, "faq"),
-      shipping: sectionsForTab(product.sections, "shipping"),
     };
   }, [product.sections]);
 
@@ -328,12 +323,6 @@ export function ProductDetailSections({
                 ) : null}
                 <dl className="mt-6 grid gap-3 text-sm text-zinc-600 sm:grid-cols-2">
                   <div>
-                    <dt className="text-zinc-400">기본 가격</dt>
-                    <dd className="mt-0.5 font-semibold text-zinc-900">
-                      {product.basePrice.toLocaleString("ko-KR")}원
-                    </dd>
-                  </div>
-                  <div>
                     <dt className="text-zinc-400">주문 수량</dt>
                     <dd className="mt-0.5 font-semibold text-zinc-900">
                       {product.minQuantity}~{product.maxQuantity}개
@@ -423,22 +412,6 @@ export function ProductDetailSections({
             </div>
           </section>
         ) : null}
-
-        <section
-          id="detail-shipping"
-          className="scroll-mt-24 sm:scroll-mt-28"
-        >
-          <h2 className="text-xl font-bold text-zinc-900">
-            {SECTION_TITLES.shipping}
-          </h2>
-          <div className="mt-8">
-            {tabContent.shipping.length > 0 ? (
-              <SectionBlocks items={tabContent.shipping} />
-            ) : (
-              <EmptyHint text="등록된 배송 안내가 없습니다." />
-            )}
-          </div>
-        </section>
 
         <RelatedProducts products={product.related} />
       </div>

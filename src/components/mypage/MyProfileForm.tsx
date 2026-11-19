@@ -145,7 +145,7 @@ export function MyProfileForm({ user: initial }: MyProfileFormProps) {
               {user.pointsBalance.toLocaleString()} P
             </p>
             <p className="mt-1 text-xs text-zinc-400">
-              결제 금액의 1%가 적립됩니다.
+              주문 접수 시 주문 금액의 1%가 적립됩니다.
             </p>
           </div>
           <div className="text-right">

@@ -10,9 +10,11 @@ import {
   Box,
   ChevronRight,
   ClipboardList,
+  Clock3,
   Factory,
   FolderTree,
   Package,
+  RefreshCcw,
   ShoppingBag,
   TrendingUp,
   Truck,
@@ -20,29 +22,15 @@ import {
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/admin/OrderDetailModal";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
-import { PaymentStatusBadge } from "@/components/orders/PaymentStatusBadge";
-import type { AdminDashboardData } from "@/lib/admin-dashboard";
+import type {
+  AdminDashboardData,
+  QualityMetrics,
+} from "@/lib/admin-dashboard";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
-import { PAYMENT_STATUS_LABELS } from "@/lib/payment-status";
 import type { Order } from "@/types";
 
 interface AdminDashboardProps {
   data: AdminDashboardData;
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
-function formatShortPrice(price: number) {
-  if (price >= 10000) {
-    return `${Math.round(price / 10000)}만`;
-  }
-  return new Intl.NumberFormat("ko-KR").format(price);
 }
 
 function formatDate(iso: string) {
@@ -64,23 +52,29 @@ function formatHeaderDate() {
 }
 
 function todoReason(order: Order): string {
-  if (order.paymentStatus === "UNPAID" && order.status !== "CANCELLED") {
-    return "입금 확인 필요";
+  if (order.status === "PENDING" || order.status === "AWAITING_PAYMENT") {
+    return "접수 확인 필요";
   }
-  if (order.status === "CONFIRMED") return "제작 착수 대기";
-  if (order.status === "SHIPPED" && !order.trackingNumber?.trim()) {
-    return "송장번호 미입력";
+  if (order.status === "CONFIRMED" || order.status === "IN_PRODUCTION") {
+    return "제작 진행";
   }
   return "처리 필요";
 }
 
 export function AdminDashboard({ data }: AdminDashboardProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const { summary, statusBreakdown, paymentBreakdown, dailyTrend, todoOrders, recentOrders, topProducts } =
-    data;
+  const {
+    summary,
+    quality,
+    statusBreakdown,
+    dailyTrend,
+    todoOrders,
+    recentOrders,
+    topProducts,
+  } = data;
 
-  const maxTrendRevenue = useMemo(
-    () => Math.max(...dailyTrend.map((d) => d.revenue), 1),
+  const maxTrendOrders = useMemo(
+    () => Math.max(...dailyTrend.map((d) => d.orders), 1),
     [dailyTrend],
   );
 
@@ -96,33 +90,33 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
 
   const kpiCards = [
     {
-      label: "오늘 매출",
-      value: formatPrice(summary.todayRevenue),
-      sub: `주문 ${summary.todayOrders}건`,
+      label: "오늘 접수",
+      value: `${summary.todayOrders}건`,
+      sub: "오늘 들어온 주문",
       icon: TrendingUp,
       href: "/admin/orders",
       tone: "emerald",
     },
     {
       label: "이번 주",
-      value: formatPrice(summary.weekRevenue),
-      sub: `주문 ${summary.weekOrders}건`,
+      value: `${summary.weekOrders}건`,
+      sub: "이번 주 주문",
       icon: Banknote,
       href: "/admin/orders",
       tone: "blue",
     },
     {
-      label: "미입금",
+      label: "신규 접수",
       value: `${summary.unpaidCount}건`,
-      sub: formatPrice(summary.unpaidAmount),
+      sub: "확인이 필요한 주문",
       icon: AlertCircle,
-      href: "/admin/orders?filter=unpaid",
+      href: "/admin/orders",
       tone: "amber",
     },
     {
       label: "처리할 일",
       value: `${data.summary.todoCount}건`,
-      sub: "입금·제작·송장",
+      sub: "접수·제작",
       icon: ClipboardList,
       href: "/admin/orders",
       tone: "rose",
@@ -157,7 +151,7 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
             운영 대시보드
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            매출·주문·상품 현황을 한 화면에서 확인하고 바로 처리하세요.
+            주문·제작·상품 현황을 한 화면에서 확인하고 바로 처리하세요.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -200,22 +194,25 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
         })}
       </div>
 
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <ReworkRateCard quality={quality} />
+        <ComplianceRateCard quality={quality} />
+      </div>
+
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">최근 7일 매출</h2>
-              <p className="text-xs text-slate-400">
-                이번 달 누적 {formatPrice(summary.monthRevenue)}
-              </p>
+              <h2 className="text-sm font-semibold text-slate-900">최근 7일 접수</h2>
+              <p className="text-xs text-slate-400">일별 접수 건수</p>
             </div>
             <p className="text-sm font-semibold text-slate-700">
-              총 {formatPrice(summary.totalRevenue)}
+              전체 {summary.totalOrders}건
             </p>
           </div>
           <div className="flex h-40 items-end gap-2 sm:gap-3">
             {dailyTrend.map((day) => {
-              const height = Math.max(8, (day.revenue / maxTrendRevenue) * 100);
+              const height = Math.max(8, (day.orders / maxTrendOrders) * 100);
               return (
                 <div
                   key={day.date}
@@ -225,7 +222,7 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
                     <div
                       className="mx-auto w-full max-w-[48px] rounded-t-lg bg-slate-900 transition-all"
                       style={{ height: `${height}%` }}
-                      title={`${day.label}: ${formatPrice(day.revenue)} (${day.orders}건)`}
+                      title={`${day.label}: ${day.orders}건`}
                     />
                   </div>
                   <div className="text-center">
@@ -253,7 +250,7 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
             />
             <SnapshotRow
               icon={Truck}
-              label="배송 중"
+              label="작업 완료"
               value={`${summary.shippedCount}건`}
               href="/admin/orders"
             />
@@ -320,11 +317,9 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-sm text-slate-600">
-                        {order.shippingName ?? order.customerName} ·{" "}
-                        {order.productName}
+                        {order.customerName} · {order.productName}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        {formatPrice(order.totalPrice)} ·{" "}
                         {formatDate(order.createdAt)}
                       </p>
                     </div>
@@ -376,30 +371,10 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
               </div>
             </div>
             <div className="p-5">
-              <h2 className="text-sm font-semibold text-slate-900">결제 현황</h2>
-              <p className="mb-4 text-xs text-slate-400">입금·환불 상태</p>
-              <div className="space-y-3">
-                {paymentBreakdown
-                  .filter((p) => p.count > 0)
-                  .map((p) => (
-                    <div
-                      key={p.status}
-                      className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2.5"
-                    >
-                      <span className="text-sm text-slate-600">
-                        {PAYMENT_STATUS_LABELS[p.status]}
-                      </span>
-                      <span className="text-sm font-bold tabular-nums text-slate-900">
-                        {p.count}건
-                      </span>
-                    </div>
-                  ))}
-              </div>
-              {topProducts.length > 0 && (
+              <h2 className="text-sm font-semibold text-slate-900">인기 상품</h2>
+              {topProducts.length > 0 ? (
                 <>
-                  <h3 className="mt-6 text-sm font-semibold text-slate-900">
-                    인기 상품
-                  </h3>
+                  <p className="mb-4 text-xs text-slate-400">주문 많은 상품</p>
                   <ul className="mt-3 space-y-2">
                     {topProducts.slice(0, 4).map((p, i) => (
                       <li key={p.productId}>
@@ -415,13 +390,15 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
                             {p.productName}
                           </span>
                           <span className="shrink-0 text-xs tabular-nums text-slate-400">
-                            {p.orderCount}건 · {formatShortPrice(p.revenue)}원
+                            {p.orderCount}건
                           </span>
                         </Link>
                       </li>
                     ))}
                   </ul>
                 </>
+              ) : (
+                <p className="mt-2 text-xs text-slate-400">아직 주문이 없습니다.</p>
               )}
             </div>
           </div>
@@ -459,8 +436,6 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
                     <th className="px-5 py-3 sm:px-6">주문번호</th>
                     <th className="px-3 py-3">고객</th>
                     <th className="px-3 py-3">상품</th>
-                    <th className="px-3 py-3">금액</th>
-                    <th className="px-3 py-3">입금</th>
                     <th className="px-3 py-3">상태</th>
                     <th className="px-3 py-3">접수일</th>
                   </tr>
@@ -477,21 +452,12 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
                       </td>
                       <td className="px-3 py-3">
                         <p className="text-sm text-slate-800">
-                          {order.shippingName ?? order.customerName}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {order.shippingPhone ?? ""}
+                          {order.customerName}
                         </p>
                       </td>
                       <td className="max-w-[180px] truncate px-3 py-3 text-slate-600">
                         {order.productName}
                         <span className="ml-1 text-slate-400">×{order.quantity}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums text-slate-900">
-                        {formatPrice(order.totalPrice)}
-                      </td>
-                      <td className="px-3 py-3">
-                        <PaymentStatusBadge status={order.paymentStatus} />
                       </td>
                       <td className="px-3 py-3">
                         <OrderStatusBadge status={order.status} />
@@ -518,18 +484,13 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
                         {order.orderNumber}
                       </p>
                       <p className="mt-0.5 truncate text-sm text-slate-600">
-                        {order.shippingName ?? order.customerName} ·{" "}
-                        {order.productName}
+                        {order.customerName} · {order.productName}
                       </p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        <PaymentStatusBadge status={order.paymentStatus} />
                         <OrderStatusBadge status={order.status} />
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {formatPrice(order.totalPrice)}
-                      </p>
                       <p className="text-[11px] text-slate-400">
                         {formatDate(order.createdAt)}
                       </p>
@@ -599,5 +560,354 @@ function SnapshotRow({
         {value}
       </span>
     </Link>
+  );
+}
+
+function ReworkRateCard({ quality }: { quality: QualityMetrics }) {
+  const maxBar = Math.max(
+    ...quality.reworkMonthly.map((m) => Math.max(m.workCount, m.commentCount)),
+    1,
+  );
+  const yMax = Math.max(1, Math.ceil(maxBar));
+  const yTicks = Array.from(
+    new Set([yMax, Math.round(yMax * 0.5), 0].map((v) => Math.max(0, v))),
+  ).sort((a, b) => b - a);
+  const goalMet = quality.reworkRatePercent <= quality.reworkGoalPercent;
+
+  /** 막대 위 레이블 여백을 위해 최대 높이 85% */
+  const countToHeightPct = (count: number) =>
+    count <= 0 ? 0 : Math.max(10, (count / yMax) * 85);
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium text-slate-500">재작업률</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+            {quality.reworkRatePercent}
+            <span className="ml-0.5 text-lg font-semibold text-slate-500">%</span>
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {quality.reworkOrderCount}건 / {quality.totalWorkOrderCount}건
+            (고객 코멘트)
+          </p>
+        </div>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <RefreshCcw className="h-5 w-5" />
+        </span>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-slate-500">최근 6개월</p>
+          <div className="flex items-center gap-3 text-[10px] text-slate-400">
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-slate-300" />
+              작업건수
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              고객 코멘트
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-1.5">
+          <div className="relative h-40 w-7 shrink-0" aria-hidden>
+            {yTicks.map((tick) => (
+              <span
+                key={tick}
+                className="absolute right-0 -translate-y-1/2 text-[10px] tabular-nums leading-none text-slate-400"
+                style={{
+                  top: `${100 - (tick / yMax) * 85}%`,
+                }}
+              >
+                {tick}
+              </span>
+            ))}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="relative h-40 w-full">
+              <div className="pointer-events-none absolute inset-0">
+                {yTicks.map((tick) => (
+                  <div
+                    key={tick}
+                    className="absolute inset-x-0 border-t border-slate-100"
+                    style={{
+                      top: `${100 - (tick / yMax) * 85}%`,
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className="relative z-[1] flex h-full items-end gap-2">
+                {quality.reworkMonthly.map((m) => {
+                  const workH = countToHeightPct(m.workCount);
+                  const commentH = countToHeightPct(m.commentCount);
+                  return (
+                    <div
+                      key={m.key}
+                      className="flex h-full min-w-0 flex-1 items-end justify-center gap-0.5"
+                    >
+                      <div className="relative h-full w-[42%] max-w-[16px]">
+                        {m.workCount > 0 ? (
+                          <span
+                            className="absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold tabular-nums leading-none text-slate-600"
+                            style={{ bottom: `calc(${workH}% + 4px)` }}
+                          >
+                            {m.workCount}
+                          </span>
+                        ) : null}
+                        <div
+                          className="absolute inset-x-0 bottom-0 rounded-t bg-slate-300"
+                          style={{ height: `${workH}%` }}
+                          title={`작업 ${m.workCount}건`}
+                        />
+                      </div>
+                      <div className="relative h-full w-[42%] max-w-[16px]">
+                        {m.commentCount > 0 ? (
+                          <span
+                            className="absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold tabular-nums leading-none text-amber-700"
+                            style={{ bottom: `calc(${commentH}% + 4px)` }}
+                          >
+                            {m.commentCount}
+                          </span>
+                        ) : null}
+                        {m.commentCount > 0 ? (
+                          <div
+                            className="absolute inset-x-0 bottom-0 rounded-t bg-amber-400"
+                            style={{ height: `${commentH}%` }}
+                            title={`코멘트 ${m.commentCount}건`}
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-1 flex w-full">
+              {quality.reworkMonthly.map((m) => (
+                <span
+                  key={m.key}
+                  className="min-w-0 flex-1 text-center text-[10px] text-slate-400"
+                >
+                  {m.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+        <span>구축 목표 {quality.reworkGoalPercent}% 이하</span>
+        {goalMet ? (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            목표 달성
+          </span>
+        ) : (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+            개선 필요
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ComplianceRateCard({ quality }: { quality: QualityMetrics }) {
+  const points = quality.complianceMonthly;
+  const goal = quality.complianceGoalPercent;
+  const goalMet =
+    quality.deliveryCompliancePercent != null &&
+    quality.deliveryCompliancePercent >= goal;
+  const n = points.length;
+  const hasShipData = quality.shippedSampleCount > 0;
+  const yTicks = [100, 75, 50, 25, 0] as const;
+
+  /** 값(%) → 플롯 영역 top% (0=상단, 100=하단). 레이블 여백 확보 */
+  const valueToTop = (value: number) => {
+    const topPad = 10;
+    const bottomPad = 4;
+    const usable = 100 - topPad - bottomPad;
+    return topPad + ((100 - Math.max(0, Math.min(100, value))) / 100) * usable;
+  };
+
+  const coords = points.map((p, i) => {
+    const x = n <= 1 ? 50 : ((i + 0.5) / n) * 100;
+    const value = p.compliancePercent;
+    const y = value == null ? null : valueToTop(value);
+    return { x, y, value, label: p.label, key: p.key };
+  });
+
+  const linePath = coords
+    .filter((c) => c.y != null)
+    .map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(2)} ${c.y!.toFixed(2)}`)
+    .join(" ");
+
+  const goalY = valueToTop(goal);
+
+  return (
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium text-slate-500">납기 준수율</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+            {quality.deliveryCompliancePercent == null ? (
+              "—"
+            ) : (
+              <>
+                {quality.deliveryCompliancePercent}
+                <span className="ml-0.5 text-lg font-semibold text-slate-500">
+                  %
+                </span>
+              </>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {hasShipData
+              ? `납기 내 ${quality.onTimeShipCount}건 / 출하 ${quality.shippedSampleCount}건`
+              : "배송중으로 변경된 주문이 없습니다"}
+          </p>
+        </div>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <Clock3 className="h-5 w-5" />
+        </span>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-slate-500">
+            월별 납기 준수율(%)
+          </p>
+          <span className="text-[10px] text-slate-400">
+            점선 {goal}% 목표
+          </span>
+        </div>
+
+        <div className="flex gap-1.5">
+          <div className="relative h-40 w-7 shrink-0" aria-hidden>
+            {yTicks.map((tick) => (
+              <span
+                key={tick}
+                className="absolute right-0 -translate-y-1/2 text-[10px] tabular-nums leading-none text-slate-400"
+                style={{ top: `${valueToTop(tick)}%` }}
+              >
+                {tick}
+              </span>
+            ))}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="relative h-40 w-full">
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+                role="img"
+                aria-label="월별 납기 준수율 추이"
+              >
+                {yTicks.map((tick) => (
+                  <line
+                    key={tick}
+                    x1="0"
+                    y1={valueToTop(tick)}
+                    x2="100"
+                    y2={valueToTop(tick)}
+                    stroke="#e2e8f0"
+                    strokeWidth="1"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
+                <line
+                  x1="0"
+                  y1={goalY}
+                  x2="100"
+                  y2={goalY}
+                  stroke="#94a3b8"
+                  strokeWidth="1.2"
+                  strokeDasharray="2 2"
+                  vectorEffect="non-scaling-stroke"
+                />
+                {hasShipData && linePath ? (
+                  <path
+                    d={linePath}
+                    fill="none"
+                    stroke="#2563eb"
+                    strokeWidth="2.5"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : (
+                  <line
+                    x1="0"
+                    y1={valueToTop(0)}
+                    x2="100"
+                    y2={valueToTop(0)}
+                    stroke="#93c5fd"
+                    strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
+              </svg>
+
+              <div className="pointer-events-none absolute inset-0 flex">
+                {coords.map((c) => (
+                  <div
+                    key={c.key}
+                    className="relative h-full min-w-0 flex-1"
+                  >
+                    {c.y != null && c.value != null && c.value !== 0 ? (
+                      <span
+                        className="absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold tabular-nums text-blue-700"
+                        style={{
+                          top: `calc(${c.y}% - 14px)`,
+                        }}
+                      >
+                        {c.value}%
+                      </span>
+                    ) : null}
+                    {c.y != null ? (
+                      <span
+                        className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600 ring-2 ring-white"
+                        style={{ top: `${c.y}%` }}
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-1 flex w-full">
+              {points.map((p) => (
+                <span
+                  key={p.key}
+                  className="min-w-0 flex-1 text-center text-[10px] text-slate-400"
+                >
+                  {p.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+        <span>구축 목표 {goal}% 이상 · 납기 기준 주문+7일</span>
+        {quality.deliveryCompliancePercent == null ? null : goalMet ? (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            목표 달성
+          </span>
+        ) : (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+            개선 필요
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

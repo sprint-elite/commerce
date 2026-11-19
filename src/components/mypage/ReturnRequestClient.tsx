@@ -52,7 +52,6 @@ export function ReturnRequestClient() {
       (oData.orders ?? [])
         .filter(
           (o) =>
-            o.paymentStatus === "PAID" &&
             isReturnEligibleOrderStatus(o.status),
         )
         .map((o) => ({
@@ -96,7 +95,7 @@ export function ReturnRequestClient() {
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">교환 · 반품 신청</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          결제 완료 후 제작·배송이 진행된 주문만 신청할 수 있습니다. 안내 정책은{" "}
+          제작·배송이 진행된 주문만 신청할 수 있습니다. 안내 정책은{" "}
           <Link href="/returns" className="font-medium text-zinc-800 underline">
             교환·반품 안내
           </Link>
@@ -123,7 +122,7 @@ export function ReturnRequestClient() {
         </select>
         {orders.length === 0 ? (
           <p className="text-xs text-zinc-500">
-            신청 가능한 주문이 없습니다. (입금대기·미결제 주문은 제외)
+            신청 가능한 주문이 없습니다. (접수만 된 주문은 제외)
           </p>
         ) : null}
         <select

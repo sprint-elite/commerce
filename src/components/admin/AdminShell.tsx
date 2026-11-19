@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  BarChart3,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -15,11 +14,9 @@ import {
   LogOut,
   MessageSquare,
   Package,
-  Percent,
-  RefreshCcw,
+  PackageOpen,
   Settings,
   ShoppingBag,
-  Star,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -54,8 +51,12 @@ const navGroups: NavGroup[] = [
     label: "주문",
     items: [
       { href: "/admin/orders", label: "주문 목록", icon: ClipboardList, exact: false },
-      { href: "/admin/returns", label: "교환반품", icon: RefreshCcw, exact: false },
-      { href: "/admin/reports", label: "매출", icon: BarChart3, exact: false },
+      {
+        href: "/admin/returns",
+        label: "교환 · 반품",
+        icon: PackageOpen,
+        exact: false,
+      },
     ],
   },
   {
@@ -73,14 +74,12 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/admin/banners", label: "배너", icon: ImageIcon, exact: false },
       { href: "/admin/content", label: "소개글", icon: FileText, exact: false },
-      { href: "/admin/coupons", label: "쿠폰", icon: Percent, exact: false },
     ],
   },
   {
     id: "customers",
     label: "고객",
     items: [
-      { href: "/admin/reviews", label: "리뷰", icon: Star, exact: false },
       { href: "/admin/inquiries", label: "문의", icon: MessageSquare, exact: false },
       { href: "/admin/users", label: "계정", icon: Users, exact: false },
     ],
@@ -123,9 +122,23 @@ interface AdminShellProps {
 
 export function AdminShell({ user, children }: AdminShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [ready, setReady] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.push("/admin/login");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     setCollapsed(readCollapsed());
@@ -254,11 +267,12 @@ export function AdminShell({ user, children }: AdminShellProps) {
           </div>
           <button
             type="button"
-            onClick={() => void logout()}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            disabled={loggingOut}
+            onClick={() => void handleLogout()}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
           >
             <LogOut className="h-3.5 w-3.5" />
-            로그아웃
+            {loggingOut ? "로그아웃 중…" : "로그아웃"}
           </button>
         </div>
       </aside>

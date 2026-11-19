@@ -75,7 +75,7 @@ export function BuilderPage({
   const [canvasDims, setCanvasDims] = useState({ w: 0, h: 0 });
   const [jsonModalContent, setJsonModalContent] = useState("");
   const [showOptions, setShowOptions] = useState(false);
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(!embedded);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [showLayerModal, setShowLayerModal] = useState(false);
   const [designRevision, setDesignRevision] = useState(0);
   const [canvasZoom, setCanvasZoom] = useState(1);
@@ -514,7 +514,7 @@ export function BuilderPage({
         }
 
         if (!isUpdate && data.order?.id) {
-          router.push(`/checkout/${data.order.id}`);
+          router.push(`/mypage/orders/${data.order.id}`);
           return;
         }
 
@@ -615,6 +615,12 @@ export function BuilderPage({
 
   const toggleLeftSidebar = () => setLeftSidebarOpen((v) => !v);
 
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setLeftSidebarOpen(false);
+    }
+  }, []);
+
   const clampZoom = useCallback(
     (value: number) =>
       Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 10) / 10)),
@@ -635,15 +641,38 @@ export function BuilderPage({
     [clampZoom],
   );
 
-  const toolbarTrailing = embedded ? (
-    <button
-      type="button"
-      onClick={() => setShowOptions((v) => !v)}
-      className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 lg:hidden"
-    >
-      옵션
-    </button>
-  ) : undefined;
+  const toolbarTrailing = !embedded ? undefined : (
+    <div className="flex items-center gap-1.5">
+      {embedded && !isAdminEdit && (
+        <OrderLoadButton
+          onOpen={() => {
+            persistCanvas();
+            setShowOrderLoadModal(true);
+          }}
+          onStartNew={handleStartNewOrder}
+          loadedOrderNumber={loadedOrderNumber || undefined}
+        />
+      )}
+      {embedded && (
+        <button
+          type="button"
+          onClick={toggleLeftSidebar}
+          className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 lg:hidden"
+        >
+          작업 요청
+        </button>
+      )}
+      {embedded && (
+        <button
+          type="button"
+          onClick={() => setShowOptions((v) => !v)}
+          className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 lg:hidden"
+        >
+          옵션
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <BuilderProductProvider value={productContext ?? null}>
@@ -771,7 +800,6 @@ export function BuilderPage({
       />
 
       <div className="relative flex min-h-0 flex-1">
-        {!embedded && (
           <>
             <div
               className={`hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out lg:block ${
@@ -818,7 +846,6 @@ export function BuilderPage({
               )}
             </button>
           </>
-        )}
 
         <main
           className={`relative min-w-0 flex-1 overflow-auto ${

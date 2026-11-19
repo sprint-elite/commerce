@@ -3,7 +3,7 @@ import type { Order, OrderStatus } from "@/types";
 export const ORDER_TRACKER_STAGES = [
   {
     key: "received",
-    label: "접수·입금",
+    label: "접수",
     statuses: ["PENDING", "AWAITING_PAYMENT"] as OrderStatus[],
   },
   {
@@ -18,12 +18,12 @@ export const ORDER_TRACKER_STAGES = [
   },
   {
     key: "shipped",
-    label: "배송중",
+    label: "작업 완료",
     statuses: ["SHIPPED"] as OrderStatus[],
   },
   {
     key: "delivered",
-    label: "배송완료",
+    label: "종료",
     statuses: ["DELIVERED"] as OrderStatus[],
   },
 ] as const;

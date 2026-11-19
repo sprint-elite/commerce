@@ -34,7 +34,6 @@ export async function POST(request: Request, context: Ctx) {
       where: {
         userId: user.id,
         productId: product.id,
-        paymentStatus: "PAID",
         status: { not: "CANCELLED" },
         ...(body.orderId ? { id: body.orderId } : {}),
       },
@@ -47,7 +46,6 @@ export async function POST(request: Request, context: Ctx) {
       (await prisma.order.findFirst({
         where: {
           userId: user.id,
-          paymentStatus: "PAID",
           status: { not: "CANCELLED" },
           items: { some: { productId: product.id } },
         },
@@ -55,7 +53,7 @@ export async function POST(request: Request, context: Ctx) {
       }));
 
     if (!eligibleViaItem) {
-      return jsonError("구매·결제 완료한 상품만 리뷰할 수 있습니다.", 403);
+      return jsonError("주문한 상품만 리뷰할 수 있습니다.", 403);
     }
 
     const existing = await prisma.productReview.findFirst({

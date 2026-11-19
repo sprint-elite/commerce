@@ -1,5 +1,6 @@
 import type { FabricObject } from "fabric";
 import type { TextAlignOption, TextStyleState } from "@/types/text-style";
+import { DEFAULT_BUILDER_FONT } from "@/lib/builder-fonts";
 
 type TextLike = FabricObject & {
   fontFamily?: string;
@@ -20,10 +21,10 @@ export function isTextObject(obj: FabricObject): boolean {
 }
 
 export function normalizeFontFamily(fontFamily?: string): string {
-  if (!fontFamily) return "Arial, sans-serif";
+  if (!fontFamily) return DEFAULT_BUILDER_FONT;
   return fontFamily.split(",")[0]?.replace(/['"]/g, "").trim()
     ? fontFamily
-    : "Arial, sans-serif";
+    : DEFAULT_BUILDER_FONT;
 }
 
 function isBold(fontWeight?: string | number): boolean {

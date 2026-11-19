@@ -24,6 +24,13 @@ import {
   adminTableRowClass,
   formatAdminDate,
 } from "@/components/admin/AdminListUi";
+import { AdminImageUploadField } from "@/components/admin/AdminImageUploadField";
+import {
+  articlePath,
+  contentArticleTypeLabel,
+  parseContentArticleType,
+  type ContentArticleType,
+} from "@/lib/content-article-types";
 
 type Row = {
   id: string;
@@ -57,7 +64,7 @@ type SectionForm = {
 type FaqForm = { q: string; a: string };
 
 type FormState = {
-  type: "GUIDE" | "IDEA";
+  type: ContentArticleType;
   slug: string;
   title: string;
   subtitle: string;
@@ -154,7 +161,7 @@ function rowToForm(r: Row): FormState {
     ? (r.introJson as string[]).join("\n\n")
     : "";
   return {
-    type: r.type === "IDEA" ? "IDEA" : "GUIDE",
+    type: parseContentArticleType(r.type),
     slug: r.slug,
     title: r.title,
     subtitle: r.subtitle ?? "",
@@ -355,7 +362,9 @@ export function AdminContentManager({
   initialArticles: Row[];
 }) {
   const [rows, setRows] = useState(initialArticles);
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "GUIDE" | "IDEA">("ALL");
+  const [typeFilter, setTypeFilter] = useState<
+    "ALL" | ContentArticleType
+  >("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">(
     "ALL",
   );
@@ -554,7 +563,7 @@ export function AdminContentManager({
   return (
     <AdminPageShell
       title="소개글 관리"
-      description="제작 가이드·상황별 굿즈 상세 페이지를 등록·수정합니다."
+      description="제작 가이드·상황별 굿즈·제작 사례를 등록·수정합니다."
       actions={
         <button
           type="button"
@@ -589,6 +598,7 @@ export function AdminContentManager({
                   ["ALL", "전체"],
                   ["GUIDE", "가이드"],
                   ["IDEA", "상황별 굿즈"],
+                  ["CASE", "제작 사례"],
                 ] as const
               ).map(([v, label]) => (
                 <AdminFilterPill
@@ -648,7 +658,7 @@ export function AdminContentManager({
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-900">{r.title}</p>
                         <p className="mt-0.5 font-mono text-[11px] text-slate-400">
-                          /{r.type === "IDEA" ? "ideas" : "guides"}/{r.slug}
+                          {articlePath(parseContentArticleType(r.type), r.slug)}
                         </p>
                         {r.subtitle ? (
                           <p className="mt-0.5 max-w-md truncate text-xs text-slate-500">
@@ -658,7 +668,7 @@ export function AdminContentManager({
                       </td>
                       <td className="px-3 py-3">
                         <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
-                          {r.type === "IDEA" ? "상황" : "가이드"}
+                          {contentArticleTypeLabel(r.type)}
                         </span>
                       </td>
                       <td className="px-3 py-3 tabular-nums text-slate-600">
@@ -716,7 +726,7 @@ export function AdminContentManager({
                     <div className="min-w-0">
                       <div className="mb-1 flex flex-wrap items-center gap-1.5">
                         <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
-                          {r.type === "IDEA" ? "상황" : "가이드"}
+                          {contentArticleTypeLabel(r.type)}
                         </span>
                         <AdminStatusBadge
                           active={r.isActive}
@@ -726,7 +736,7 @@ export function AdminContentManager({
                       </div>
                       <p className="font-medium text-slate-900">{r.title}</p>
                       <p className="mt-0.5 font-mono text-[11px] text-slate-400">
-                        /{r.type === "IDEA" ? "ideas" : "guides"}/{r.slug}
+                        {articlePath(parseContentArticleType(r.type), r.slug)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         정렬 {r.sortOrder} · {formatAdminDate(r.publishedAt)}
@@ -791,13 +801,14 @@ export function AdminContentManager({
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        type: e.target.value === "IDEA" ? "IDEA" : "GUIDE",
+                        type: parseContentArticleType(e.target.value),
                       }))
                     }
                     className={fieldClass()}
                   >
                     <option value="GUIDE">제작 가이드</option>
                     <option value="IDEA">상황별 굿즈</option>
+                    <option value="CASE">제작 사례</option>
                   </select>
                 </label>
                 <label>
@@ -831,17 +842,15 @@ export function AdminContentManager({
                     className={fieldClass()}
                   />
                 </label>
-                <label className="sm:col-span-2">
-                  <span className={labelClass()}>커버 이미지 URL</span>
-                  <input
+                <div className="sm:col-span-2">
+                  <AdminImageUploadField
+                    label="커버 이미지"
                     value={form.coverImageUrl}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, coverImageUrl: e.target.value }))
+                    onChange={(coverImageUrl) =>
+                      setForm((f) => ({ ...f, coverImageUrl }))
                     }
-                    className={fieldClass()}
-                    placeholder="/images/..."
                   />
-                </label>
+                </div>
                 <div className="sm:col-span-2">
                   <CardGradientPicker
                     value={form.cardGradient}

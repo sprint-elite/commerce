@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import type { ProductSaleType } from "@/lib/product-sale-type";
+import { STOREFRONT_CATEGORY_DEFS } from "@/lib/storefront-categories";
 import type { ProductType } from "@/types/builder";
 import { PRODUCT_DISPLAY_IMAGES, PRODUCT_GRADIENTS } from "@/lib/home-data";
 import { ProductVisual } from "@/components/home/ProductVisual";
@@ -28,10 +29,6 @@ interface ProductChangeModalProps {
   mode?: "select" | "change";
   onClose: () => void;
   onSelect: (product: BuilderProductOption) => void;
-}
-
-function formatPrice(n: number) {
-  return new Intl.NumberFormat("ko-KR").format(n);
 }
 
 function splitProductRails(
@@ -76,6 +73,24 @@ function splitProductRails(
   };
 }
 
+type CategoryTab = "all" | (typeof STOREFRONT_CATEGORY_DEFS)[number]["slug"];
+
+const CATEGORY_TABS: { id: CategoryTab; label: string }[] = [
+  { id: "all", label: "전체" },
+  ...STOREFRONT_CATEGORY_DEFS.map((c) => ({
+    id: c.slug as CategoryTab,
+    label: c.name,
+  })),
+];
+
+function matchesCategoryTab(
+  product: BuilderProductOption,
+  tab: CategoryTab,
+): boolean {
+  if (tab === "all") return true;
+  return product.categorySlug === tab;
+}
+
 export function ProductChangeModal({
   open,
   currentSlug,
@@ -86,9 +101,11 @@ export function ProductChangeModal({
   const [products, setProducts] = useState<BuilderProductOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<CategoryTab>("all");
 
   useEffect(() => {
     if (!open) return;
+    setTab("all");
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -131,9 +148,14 @@ export function ProductChangeModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  const filteredProducts = useMemo(
+    () => products.filter((p) => matchesCategoryTab(p, tab)),
+    [products, tab],
+  );
+
   const { related, recommended } = useMemo(
-    () => splitProductRails(products, currentSlug),
-    [products, currentSlug],
+    () => splitProductRails(filteredProducts, currentSlug),
+    [filteredProducts, currentSlug],
   );
 
   if (!open) return null;
@@ -162,7 +184,7 @@ export function ProductChangeModal({
             </h2>
             {mode === "select" ? (
               <p className="mt-0.5 text-xs text-zinc-500">
-                에코백 · 장바구니 · 파우치 중 골라 주세요
+                카테고리에서 상품을 골라 주세요
               </p>
             ) : null}
           </div>
@@ -173,6 +195,32 @@ export function ProductChangeModal({
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        <div
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-100 bg-white px-4 py-2.5 scrollbar-hide sm:px-6"
+          role="tablist"
+          aria-label="상품 카테고리"
+        >
+          {CATEGORY_TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.id)}
+                className={`shrink-0 cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                  active
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-gradient-to-b from-zinc-50 to-white py-4 sm:space-y-6 sm:py-5">
@@ -192,14 +240,23 @@ export function ProductChangeModal({
               선택 가능한 커스텀 상품이 없습니다.
             </p>
           )}
+          {!loading &&
+            !error &&
+            products.length > 0 &&
+            filteredProducts.length === 0 && (
+              <p className="py-16 text-center text-sm text-zinc-500">
+                이 카테고리에 표시할 상품이 없습니다.
+              </p>
+            )}
 
-          {!loading && !error && products.length > 0 && (
+          {!loading && !error && filteredProducts.length > 0 && (
             <>
               <ProductRail
                 title="관련 상품"
                 products={related}
                 currentSlug={currentSlug}
                 selectMode={mode === "select"}
+                scrollActiveIntoView
                 onSelect={onSelect}
               />
               <ProductRail
@@ -222,12 +279,15 @@ function ProductRail({
   products,
   currentSlug,
   selectMode,
+  scrollActiveIntoView = false,
   onSelect,
 }: {
   title: string;
   products: BuilderProductOption[];
   currentSlug?: string | null;
   selectMode?: boolean;
+  /** 관련 상품만 현재 상품 위치로 스크롤. 추천 상품은 0부터 보여 양쪽 잘림 방지 */
+  scrollActiveIntoView?: boolean;
   onSelect: (product: BuilderProductOption) => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -255,7 +315,12 @@ function ProductRail({
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const el = trackRef.current;
-      if (!el || !currentSlug) {
+      if (!el) {
+        updateArrows();
+        return;
+      }
+      if (!scrollActiveIntoView || !currentSlug) {
+        el.scrollLeft = 0;
         updateArrows();
         return;
       }
@@ -270,7 +335,7 @@ function ProductRail({
       updateArrows();
     });
     return () => cancelAnimationFrame(id);
-  }, [products, currentSlug, updateArrows]);
+  }, [products, currentSlug, updateArrows, scrollActiveIntoView]);
 
   const scrollByDir = (dir: -1 | 1) => {
     const el = trackRef.current;
@@ -436,16 +501,12 @@ function ProductRail({
                       {p.shortDesc}
                     </p>
                   )}
-                  <p className="mt-1.5 text-xs font-semibold tabular-nums text-zinc-800">
-                    {formatPrice(p.basePrice)}
-                    <span className="font-medium text-zinc-400">원~</span>
-                  </p>
                 </div>
               </button>
             </article>
           );
         })}
-        <div className="w-1 shrink-0" aria-hidden />
+        <div className="w-5 shrink-0 sm:w-6" aria-hidden />
       </div>
     </section>
   );

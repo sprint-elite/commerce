@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { BagMockupView } from "@/components/builder/BagMockupView";
 import { createBagCanvas } from "@/lib/fabric/bag-canvas";
-import { computeMockupPlacement } from "@/lib/fabric/mockup-builder";
+import {
+  computeMockupPlacement,
+  photoMockupFromDbFace,
+} from "@/lib/fabric/mockup-builder";
+import type { ProductMockupFaceDto } from "@/lib/product-mockup";
 import {
   getCanvasScale,
   scaleMockupOffset,
@@ -30,6 +34,7 @@ function sidesFromPayload(payload: SavedBuilderPayload): ViewSide[] {
 
 interface DesignPreviewPanelProps {
   payload: SavedBuilderPayload;
+  mockupFaces?: ProductMockupFaceDto[];
   side: ViewSide;
   onSideChange: (side: ViewSide) => void;
   annotations?: AnnotationItem[];
@@ -38,6 +43,7 @@ interface DesignPreviewPanelProps {
 
 export function DesignPreviewPanel({
   payload,
+  mockupFaces = [],
   side,
   onSideChange,
   annotations = [],
@@ -75,16 +81,25 @@ export function DesignPreviewPanel({
 
   const mockupKey = `${payload.options.productType}-${payload.options.size}-${payload.options.fabric}-${payload.options.bagColor}-${payload.options.handleStrapColor}-${payload.options.handle}-${payload.options.pocket}-${side}`;
 
+  const dbFace = useMemo(
+    () => mockupFaces.find((face) => face.side === side) ?? null,
+    [mockupFaces, side],
+  );
+
   const placement = useMemo(() => {
     if (dims.w < 100 || dims.h < 100) return null;
+    const photoOverride = dbFace
+      ? photoMockupFromDbFace(dbFace, payload.options.productType, side)
+      : null;
     return computeMockupPlacement(
       dims.w,
       dims.h,
       payload.options,
       side,
       scaledMockupOffset,
+      photoOverride,
     );
-  }, [dims.w, dims.h, payload.options, side, mockupKey, scaledMockupOffset.x, scaledMockupOffset.y]);
+  }, [dims.w, dims.h, payload.options, side, mockupKey, scaledMockupOffset.x, scaledMockupOffset.y, dbFace]);
 
   useEffect(() => {
     const container = wrapperRef.current;
@@ -103,7 +118,7 @@ export function DesignPreviewPanel({
     return () => ro.disconnect();
   }, []);
 
-  const fabricMountKey = `${dims.w}x${dims.h}`;
+  const fabricMountKey = `${dims.w}x${dims.h}-${mockupFaces.map((face) => face.imageUrl).join("|")}`;
 
   useEffect(() => {
     const el = canvasElRef.current;
@@ -113,7 +128,26 @@ export function DesignPreviewPanel({
     setReady(false);
     setError(null);
 
-    createBagCanvas(el, dims.w, dims.h, payload.options, side)
+    createBagCanvas(
+      el,
+      dims.w,
+      dims.h,
+      payload.options,
+      side,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      (viewSide) => {
+        const face = mockupFaces.find((item) => item.side === viewSide);
+        if (!face) return null;
+        return photoMockupFromDbFace(
+          face,
+          payload.options.productType,
+          viewSide,
+        );
+      },
+    )
       .then(async ({ canvas, handle }) => {
         if (cancelled) {
           handle.dispose();

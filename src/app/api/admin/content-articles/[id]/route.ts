@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
+import { parseContentArticleType } from "@/lib/content-article-types";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -40,7 +41,9 @@ export async function PATCH(request: Request, context: Ctx) {
     const row = await prisma.contentArticle.update({
       where: { id },
       data: {
-        ...(body.type ? { type: body.type === "IDEA" ? "IDEA" : "GUIDE" } : {}),
+        ...(body.type
+          ? { type: parseContentArticleType(body.type) }
+          : {}),
         ...(body.slug ? { slug: body.slug.trim().toLowerCase() } : {}),
         ...(body.title !== undefined ? { title: body.title.trim() } : {}),
         ...(body.subtitle !== undefined

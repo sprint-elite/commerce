@@ -16,6 +16,7 @@ import {
   type AdminProductMockupEditorHandle,
 } from "./AdminProductMockupEditor";
 import { AdminProductContentEditor } from "./AdminProductContentEditor";
+import { AdminImageUploadField } from "./AdminImageUploadField";
 
 type TabId = "basic" | "content";
 
@@ -363,8 +364,8 @@ export function AdminProductEditShell({
                   재고 수량은 <strong>상세 · 재고</strong> 탭에서 관리합니다.
                 </p>
               )}
-              <Field
-                label="썸네일 URL"
+              <AdminImageUploadField
+                label="썸네일"
                 value={form.thumbnailUrl}
                 onChange={(thumbnailUrl) =>
                   setForm((f) => ({ ...f, thumbnailUrl }))

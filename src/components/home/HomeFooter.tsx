@@ -1,12 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
+import { useSiteInfo } from "@/components/site/SiteInfoProvider";
 import { SHOW_HOME_REVIEWS_SECTION } from "@/lib/home-data";
 import { PRODUCT_PAGE_CONTAINER } from "@/lib/product-layout";
-import { SITE_INFO } from "@/lib/site-info";
 
-/** 클라이언트/서버 공용 — 운영 값은 관리자 사이트설정(DB)과 site-info 상수 중 사용처에 맞게 */
+/** 클라이언트 — 루트 레이아웃의 SiteInfoProvider(관리자 설정 DB) 값 사용 */
 export function HomeFooter({ wide = false }: { wide?: boolean }) {
-  const info = SITE_INFO;
+  const info = useSiteInfo();
 
   return (
     <footer className="border-t border-zinc-200 bg-zinc-50">
@@ -60,16 +62,6 @@ export function HomeFooter({ wide = false }: { wide?: boolean }) {
                 </Link>
               </li>
               <li>
-                <Link href="/returns" className="hover:text-zinc-900">
-                  교환·반품 안내
-                </Link>
-              </li>
-              <li>
-                <Link href="/mypage/returns" className="hover:text-zinc-900">
-                  교환·반품 신청
-                </Link>
-              </li>
-              <li>
                 <Link href="/inquiry" className="hover:text-zinc-900">
                   1:1 문의
                 </Link>
@@ -99,14 +91,10 @@ export function HomeFooter({ wide = false }: { wide?: boolean }) {
             {info.companyName} · 대표 {info.ceoName} · 사업자등록번호{" "}
             {info.businessNumber}
           </p>
+          <p>{info.address}</p>
           <p>
-            통신판매업신고 {info.mailOrderNumber} · {info.address}
-          </p>
-          <p>
-            고객센터: {info.phone} · {info.email} · {info.hours}
-          </p>
-          <p>
-            무통장: {info.bankAccount} ({info.bankHolder})
+            {info.email}
+            {info.hours ? ` · ${info.hours}` : null}
           </p>
           <p className="pt-2">
             © {new Date().getFullYear()} {info.brandName}

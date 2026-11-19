@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
 import { LegalPageShell, LegalSection } from "@/components/legal/LegalPageShell";
-import { SITE_INFO } from "@/lib/site-info";
+import { formatEmailPhoneContact } from "@/lib/site-contact";
+import { getSiteSettings } from "@/lib/site-settings";
 
-export const metadata: Metadata = {
-  title: "개인정보처리방침",
-  description: `${SITE_INFO.brandName} 개인정보처리방침`,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const info = await getSiteSettings();
+  return {
+    title: "개인정보처리방침",
+    description: `${info.brandName} 개인정보처리방침`,
+  };
+}
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const info = await getSiteSettings();
+
   return (
     <LegalPageShell title="개인정보처리방침">
       <p>
-        {SITE_INFO.companyName}(이하 &ldquo;회사&rdquo;)는 개인정보 보호법 등
+        {info.companyName}(이하 &ldquo;회사&rdquo;)는 개인정보 보호법 등
         관련 법령에 따라 이용자의 개인정보를 보호하고, 이와 관련한 고충을
         신속하고 원활하게 처리할 수 있도록 다음과 같이 개인정보처리방침을
         수립·공개합니다.
@@ -65,9 +71,9 @@ export default function PrivacyPage() {
 
       <LegalSection title="7. 개인정보 보호책임자">
         <p>
-          문의: {SITE_INFO.email} / {SITE_INFO.phone}
+          문의: {formatEmailPhoneContact(info.email, info.phone) || info.email}
           <br />
-          상호: {SITE_INFO.companyName}
+          상호: {info.companyName}
         </p>
       </LegalSection>
     </LegalPageShell>

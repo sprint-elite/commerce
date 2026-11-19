@@ -20,18 +20,18 @@ export default async function MyPage() {
 
   const recentOrders = filterRecentOrders(orders);
   const hasOlderOrders = orders.length > recentOrders.length;
-  const unpaidCount = orders.filter(
-    (o) => o.paymentStatus === "UNPAID" && o.status !== "CANCELLED",
+  const receivedCount = orders.filter(
+    (o) => o.status === "PENDING" || o.status === "AWAITING_PAYMENT",
   ).length;
-  const shippingCount = orders.filter((o) => o.status === "SHIPPED").length;
+  const inProductionCount = orders.filter((o) => o.status === "IN_PRODUCTION").length;
 
   return (
     <div className="space-y-8">
       <MyPageSummaryBar
         user={user}
         orderCount={orders.length}
-        unpaidCount={unpaidCount}
-        shippingCount={shippingCount}
+        receivedCount={receivedCount}
+        inProductionCount={inProductionCount}
       />
 
       <MyOrderStatusSection

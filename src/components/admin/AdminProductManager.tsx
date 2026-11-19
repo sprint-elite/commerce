@@ -24,6 +24,7 @@ import {
   AdminProductMockupEditor,
   type AdminProductMockupEditorHandle,
 } from "./AdminProductMockupEditor";
+import { AdminImageUploadField } from "./AdminImageUploadField";
 
 interface AdminProductManagerProps {
   initialProducts: AdminProductDto[];
@@ -50,11 +51,7 @@ type FormState = {
 
 type SaleFilter = "ALL" | ProductSaleType;
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
-type SortKey = "sortOrder" | "name" | "updated" | "price";
-
-function formatPrice(n: number) {
-  return new Intl.NumberFormat("ko-KR").format(n);
-}
+type SortKey = "sortOrder" | "name" | "updated";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ko-KR", {
@@ -161,7 +158,6 @@ export function AdminProductManager({
 
     return list.sort((a, b) => {
       if (sortKey === "name") return a.name.localeCompare(b.name);
-      if (sortKey === "price") return b.basePrice - a.basePrice;
       if (sortKey === "updated") {
         return (
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -414,7 +410,6 @@ export function AdminProductManager({
                 <option value="sortOrder">정렬순</option>
                 <option value="name">이름순</option>
                 <option value="updated">수정일</option>
-                <option value="price">가격순</option>
               </select>
             </div>
           </div>
@@ -490,7 +485,7 @@ export function AdminProductManager({
                     <th className="px-4 py-3">상품</th>
                     <th className="px-3 py-3">구분</th>
                     <th className="px-3 py-3">카테고리</th>
-                    <th className="px-3 py-3">가격 · 수량</th>
+                    <th className="px-3 py-3">수량</th>
                     <th className="px-3 py-3">재고</th>
                     <th className="px-3 py-3">정렬</th>
                     <th className="px-3 py-3">주문 · 평점</th>
@@ -538,14 +533,8 @@ export function AdminProductManager({
                           {p.categoryName ?? "—"}
                         </td>
                         <td className="px-3 py-3">
-                          <p className="font-medium tabular-nums text-slate-900">
-                            {formatPrice(p.basePrice)}원
-                          </p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-sm text-slate-700">
                             {p.minQuantity}~{p.maxQuantity}개
-                            {p.discountRuleCount > 0
-                              ? ` · 할인 ${p.discountRuleCount}단계`
-                              : ""}
                           </p>
                         </td>
                         <td className="px-3 py-3 text-sm tabular-nums text-slate-600">
@@ -677,8 +666,7 @@ export function AdminProductManager({
                           <SaleTypeBadge saleType={p.saleType} />
                         </div>
                         <p className="mt-1 text-sm text-slate-600">
-                          {p.categoryName ?? "카테고리 없음"} ·{" "}
-                          {formatPrice(p.basePrice)}원
+                          {p.categoryName ?? "카테고리 없음"}
                         </p>
                         <p className="text-xs text-slate-400">
                           정렬 {p.sortOrder} · {formatDate(p.updatedAt)}
@@ -907,16 +895,8 @@ export function AdminProductManager({
                 </section>
 
                 <section className="space-y-3">
-                  <SectionTitle>가격 · 수량</SectionTitle>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Field
-                      label="기본 가격"
-                      value={form.basePrice}
-                      onChange={(basePrice) =>
-                        setForm((f) => ({ ...f, basePrice }))
-                      }
-                      suffix="원"
-                    />
+                  <SectionTitle>수량</SectionTitle>
+                  <div className="grid grid-cols-2 gap-3">
                     <Field
                       label="최소 수량"
                       value={form.minQuantity}
@@ -966,13 +946,12 @@ export function AdminProductManager({
                       className={`${inputClass} min-h-[96px] resize-y`}
                     />
                   </label>
-                  <Field
-                    label="썸네일 주소"
+                  <AdminImageUploadField
+                    label="썸네일"
                     value={form.thumbnailUrl}
                     onChange={(thumbnailUrl) =>
                       setForm((f) => ({ ...f, thumbnailUrl }))
                     }
-                    placeholder="https:// 또는 /uploads/..."
                   />
                 </section>
 

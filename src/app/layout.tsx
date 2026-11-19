@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
+import { SiteInfoProvider } from "@/components/site/SiteInfoProvider";
+import { BUILDER_GOOGLE_FONTS_HREF } from "@/lib/builder-fonts";
+import { getSiteSettings } from "@/lib/site-settings";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -45,19 +48,34 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const siteSettings = await getSiteSettings();
+
   return (
     <html
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       style={{ colorScheme: "light" }}
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link href={BUILDER_GOOGLE_FONTS_HREF} rel="stylesheet" />
+      </head>
       <body className="flex min-h-screen flex-col bg-white text-zinc-900">
-        <AppShell>{children}</AppShell>
+        <SiteInfoProvider value={siteSettings}>
+          <AppShell>{children}</AppShell>
+        </SiteInfoProvider>
       </body>
     </html>
   );

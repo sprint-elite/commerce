@@ -2,17 +2,13 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
-import {
-  calculateReadyMadePrice,
-  resolveShippingFee,
-} from "@/lib/pricing";
-import { parseProductOptionSchema } from "@/lib/product-option-schema";
+import { calculateReadyMadePrice } from "@/lib/pricing";
 import { generateOrderNumber, toOrderDto } from "@/lib/orders";
+import { earnPointsForOrder } from "@/lib/points";
 import {
   normalizeShippingInput,
   validateShippingInput,
 } from "@/lib/order-shipping";
-import { getShippingConfig } from "@/lib/shipping";
 import {
   assertStockAvailable,
   decrementStock,
@@ -70,14 +66,7 @@ export async function POST(request: Request) {
       basePrice: product.basePrice,
       quantityDiscounts: product.quantityDiscounts,
     });
-    const shipCfg = await getShippingConfig();
-    const optionSchema = parseProductOptionSchema(product.optionSchema);
-    const baseShipping = optionSchema?.shippingFee ?? shipCfg.shippingFee;
-    const shippingFee = resolveShippingFee(
-      price.totalPrice,
-      baseShipping,
-      shipCfg.freeShippingThreshold,
-    );
+    const shippingFee = 0;
 
     const order = await prisma.$transaction(async (tx) => {
       await decrementStock(product.id, quantity, tx);
@@ -92,9 +81,9 @@ export async function POST(request: Request) {
           subtotal: price.subtotal,
           discountAmount: price.discountAmount,
           shippingFee,
-          totalPrice: price.totalPrice + shippingFee,
+          totalPrice: price.totalPrice,
           paymentStatus: "UNPAID",
-          status: "AWAITING_PAYMENT",
+          status: "PENDING",
           notes: shipping.notes,
           shippingName: shipping.shippingName,
           shippingPhone: shipping.shippingPhone,
@@ -117,6 +106,13 @@ export async function POST(request: Request) {
           items: true,
         },
       });
+    });
+
+    void earnPointsForOrder({
+      userId: order.userId,
+      orderId: order.id,
+      orderTotal: order.totalPrice,
+      orderNumber: order.orderNumber,
     });
 
     return NextResponse.json({ order: toOrderDto(order) }, { status: 201 });

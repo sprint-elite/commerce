@@ -5,8 +5,38 @@ import {
   defaultGuidePayloads,
   toPrismaCreateData,
 } from "../src/lib/content-article";
+import {
+  LEGACY_STOREFRONT_CATEGORY_SLUGS,
+  STOREFRONT_CATEGORY_DEFS,
+} from "../src/lib/storefront-categories";
 
 const prisma = new PrismaClient();
+
+function mockupFace(
+  side: "front" | "back",
+  imageUrl: string,
+  imageWidth: number,
+  imageHeight: number,
+  printX: number,
+  printY: number,
+  printW: number,
+  printH: number,
+  sortOrder: number,
+) {
+  return {
+    side,
+    label: side === "front" ? "앞면" : "뒷면",
+    imageUrl,
+    imageWidth,
+    imageHeight,
+    printX,
+    printY,
+    printW,
+    printH,
+    sortOrder,
+  };
+}
+
 
 const ACCOUNTS = [
   {
@@ -36,15 +66,9 @@ const ACCOUNTS = [
 ];
 
 async function main() {
-  // ── 카테고리 (에코백 / 장바구니 / 파우치) ──
-  const categoryDefs = [
-    { slug: "ecobag", name: "에코백", sortOrder: 1 },
-    { slug: "shopping-bag", name: "장바구니", sortOrder: 2 },
-    { slug: "pouch", name: "파우치", sortOrder: 3 },
-  ];
-
+  // ── 상품 카테고리 (스토어프론트 목록) ──
   const categories: Record<string, { id: string }> = {};
-  for (const c of categoryDefs) {
+  for (const c of STOREFRONT_CATEGORY_DEFS) {
     const row = await prisma.category.upsert({
       where: { slug: c.slug },
       update: { name: c.name, sortOrder: c.sortOrder, isActive: true },
@@ -58,420 +82,484 @@ async function main() {
     categories[c.slug] = { id: row.id };
   }
 
-  // 구 카테고리 비활성
   await prisma.category.updateMany({
-    where: { slug: "fabric-bags" },
+    where: { slug: { in: LEGACY_STOREFRONT_CATEGORY_SLUGS } },
     data: { isActive: false },
   });
 
-  // ── 커스텀 상품 (에코백 / 장바구니 / 파우치 여러 종) ──
-  const ecobagOptionSchema = {
+  // ── 에코백·토트백 실상품 4종 ──
+  const bagOptionSchema = {
     sizes: ["S", "M", "L"],
-    fabrics: ["cotton10", "cotton20", "canvas", "nonwoven"],
-    colors: ["cream", "white", "ivory", "beige", "mint", "navy", "black"],
+    fabrics: ["canvas"],
+    colors: ["cream", "white", "ivory", "beige"],
     handleStrapColors: ["cream", "white", "ivory", "beige", "navy", "black"],
-    closureTypes: ["magnetic", "snap", "none"],
-    bagShapes: [
-      "bottom-base",
-      "band",
-      "plain",
-      "cross",
-      "cross-handle",
-      "side-stitch",
-      "side-width",
-      "cylinder",
-      "drawstring",
-    ],
-    shippingFee: 3000,
-  };
-
-  const shoppingOptionSchema = {
-    sizes: ["M", "L"],
-    fabrics: ["nonwoven", "cotton10"],
-    colors: ["cream", "white", "navy"],
-    shippingFee: 3000,
-  };
-
-  const pouchOptionSchema = {
-    sizes: ["S", "M"],
-    fabrics: ["cotton10", "cotton20"],
-    colors: ["sky", "mint", "pink", "white", "black"],
-    shippingFee: 3000,
   };
 
   const productDefs = [
     {
-      slug: "ecobag",
+      slug: "canvas-cross-strap",
       builderType: "ecobag",
-      name: "사각 에코백",
-      shortDesc: "문구·이미지 커스텀, 1개부터 제작",
+      name: "길이 조절 스트랩 캔버스 크로스백",
+      shortDesc: "길이 조절 스트랩이 달린 캔버스 크로스백",
       description:
-        "면·캔버스 원단 에코백. 앞·뒤·측면 인쇄 옵션, 수량별 할인 지원.",
-      basePrice: 3500,
+        "어깨에 메는 길이 조절 스트랩과 손잡이가 함께 있는 캔버스 크로스백입니다. 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
       sortOrder: 1,
       isFeatured: true,
-      isNew: false,
-      categoryId: categories.ecobag.id,
-      optionSchema: ecobagOptionSchema,
+      isNew: true,
+      thumbnailUrl: "/mockups/tote_front-removebg-preview.png",
+      categoryId: categories["ecobag-tote"].id,
+      optionSchema: bagOptionSchema,
+      faces: [
+        mockupFace("front", "/mockups/tote_front-removebg-preview.png", 499, 500, 0.361, 0.526, 0.332, 0.298, 0),
+        mockupFace("back", "/mockups/tote_back-removebg-preview.png", 499, 500, 0.301, 0.524, 0.333, 0.299, 1),
+      ],
     },
     {
-      slug: "ecobag-round",
+      slug: "canvas-bottle-contrast-handle",
       builderType: "ecobag",
-      name: "라운드 에코백",
-      shortDesc: "둥근 실루엣 · 데일리 추천",
-      description: "부드러운 라운드 형태의 에코백. 로고·일러스트 인쇄에 적합합니다.",
-      basePrice: 3800,
+      name: "배색 손잡이 캔버스 보틀백",
+      shortDesc: "배색 손잡이가 포인트인 캔버스 보틀백",
+      description:
+        "본체와 손잡이 색이 다른 캔버스 보틀백입니다. 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
       sortOrder: 2,
       isFeatured: true,
       isNew: true,
-      categoryId: categories.ecobag.id,
-      optionSchema: ecobagOptionSchema,
+      thumbnailUrl: "/mockups/wine_bag_mockup_front-removebg-preview.png",
+      categoryId: categories["ecobag-tote"].id,
+      optionSchema: bagOptionSchema,
+      faces: [
+        mockupFace("front", "/mockups/wine_bag_mockup_front-removebg-preview.png", 498, 501, 0.42, 0.41, 0.188, 0.37, 0),
+        mockupFace("back", "/mockups/wine_bag_mockup_back-removebg-preview.png", 498, 501, 0.392, 0.409, 0.189, 0.372, 1),
+      ],
     },
     {
-      slug: "ecobag-cross",
+      slug: "canvas-tote-illustration",
       builderType: "ecobag",
-      name: "크로스 에코백",
-      shortDesc: "크로스 스트랩 · 야외·행사",
-      description: "크로스형 손잡이 에코백. 행사·배포용으로 많이 주문됩니다.",
-      basePrice: 4200,
+      name: "일러스트 인쇄 캔버스 토트백",
+      shortDesc: "일러스트 인쇄에 맞춘 캔버스 토트백",
+      description:
+        "넓은 인쇄면이 있는 기본 캔버스 토트백입니다. 앞면·뒷면에 일러스트와 로고를 올릴 수 있습니다.",
+      basePrice: 0,
       sortOrder: 3,
-      isFeatured: false,
+      isFeatured: true,
       isNew: true,
-      categoryId: categories.ecobag.id,
-      optionSchema: ecobagOptionSchema,
+      thumbnailUrl: "/mockups/canvas_front-removebg-preview.png",
+      categoryId: categories["ecobag-tote"].id,
+      optionSchema: bagOptionSchema,
+      faces: [
+        mockupFace("front", "/mockups/canvas_front-removebg-preview.png", 447, 558, 0.294, 0.452, 0.404, 0.328, 0),
+        mockupFace("back", "/mockups/canvas_back-removebg-preview.png", 447, 558, 0.311, 0.473, 0.381, 0.308, 1),
+      ],
     },
     {
-      slug: "ecobag-mini",
+      slug: "canvas-mini-drawstring",
       builderType: "ecobag",
-      name: "미니 에코백",
-      shortDesc: "소형 · 판촉·굿즈용",
-      description: "작은 사이즈 에코백. 팬미팅·판촉물로 인기입니다.",
-      basePrice: 2900,
+      name: "조리개 결합 캔버스 미니 토트백",
+      shortDesc: "조리개가 결합된 캔버스 미니 토트백",
+      description:
+        "손잡이와 조리개가 함께 있는 미니 토트백입니다. 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
       sortOrder: 4,
-      isFeatured: false,
-      isNew: false,
-      categoryId: categories.ecobag.id,
-      optionSchema: ecobagOptionSchema,
-    },
-    {
-      slug: "shopping-bag",
-      builderType: "shopping-bag",
-      name: "장바구니",
-      shortDesc: "마켓·행사용 대량 제작 추천",
-      description: "플리마켓·행사용 장바구니. 로고·문구 인쇄 가능.",
-      basePrice: 2800,
-      sortOrder: 10,
       isFeatured: true,
       isNew: true,
-      categoryId: categories["shopping-bag"].id,
-      optionSchema: shoppingOptionSchema,
+      thumbnailUrl: "/mockups/mini_front-removebg-preview.png",
+      categoryId: categories["ecobag-tote"].id,
+      optionSchema: bagOptionSchema,
+      faces: [
+        mockupFace("front", "/mockups/mini_front-removebg-preview.png", 500, 500, 0.324, 0.412, 0.348, 0.341, 0),
+        mockupFace("back", "/mockups/mini_back-removebg-preview.png", 500, 500, 0.356, 0.428, 0.289, 0.319, 1),
+      ],
     },
+    // ── 조리개 파우치·더스트백 4종 ──
     {
-      slug: "shopping-bag-wide",
-      builderType: "shopping-bag",
-      name: "와이드 장바구니",
-      shortDesc: "넓은 바닥 · 장보기용",
-      description: "바닥이 넓은 장바구니. 과일·생필품 담기에 좋습니다.",
-      basePrice: 3200,
-      sortOrder: 11,
-      isFeatured: true,
-      isNew: false,
-      categoryId: categories["shopping-bag"].id,
-      optionSchema: shoppingOptionSchema,
-    },
-    {
-      slug: "shopping-bag-fold",
-      builderType: "shopping-bag",
-      name: "접이식 장바구니",
-      shortDesc: "접어서 보관 · 휴대용",
-      description: "접이식 장바구니. 가방에 넣어 다니기 쉽습니다.",
-      basePrice: 3000,
-      sortOrder: 12,
-      isFeatured: false,
-      isNew: true,
-      categoryId: categories["shopping-bag"].id,
-      optionSchema: shoppingOptionSchema,
-    },
-    {
-      slug: "pouch",
+      slug: "cotton-30s-drawstring-120x250",
       builderType: "pouch",
-      name: "파우치",
-      shortDesc: "소형 굿즈·팬미팅 추천",
-      description: "지퍼형 파우치. 3면 인쇄 옵션.",
-      basePrice: 2200,
-      sortOrder: 20,
-      isFeatured: false,
-      isNew: true,
-      categoryId: categories.pouch.id,
-      optionSchema: pouchOptionSchema,
-    },
-    {
-      slug: "pouch-flat",
-      builderType: "pouch",
-      name: "플랫 파우치",
-      shortDesc: "얇은 형 · 문구·카드 수납",
-      description: "슬림한 플랫 파우치. 카드·화장품 미니 키트용.",
-      basePrice: 1900,
-      sortOrder: 21,
+      name: "30수 광목 세로형 조리개 파우치 120x250",
+      shortDesc: "세로형 120×250 광목 조리개 파우치",
+      description:
+        "30수 광목으로 만든 세로형 조리개 파우치입니다. 120×250 사이즈로 병·굿즈·소품을 담기 좋고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 1,
       isFeatured: true,
       isNew: true,
-      categoryId: categories.pouch.id,
-      optionSchema: pouchOptionSchema,
+      thumbnailUrl: "/mockups/30_pouch_front.png",
+      categoryId: categories["drawstring-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/30_pouch_front.png", 1122, 1402, 0.34, 0.4, 0.32, 0.38, 0),
+        mockupFace("back", "/mockups/30_pouch_back.png", 1122, 1402, 0.34, 0.4, 0.32, 0.38, 1),
+      ],
     },
     {
-      slug: "pouch-cube",
+      slug: "cotton-30s-drawstring-160x160",
       builderType: "pouch",
-      name: "큐브 파우치",
-      shortDesc: "입체형 · 용량 UP",
-      description: "입체 큐브형 파우치. 케이블·소품 정리에 적합합니다.",
-      basePrice: 2500,
-      sortOrder: 22,
-      isFeatured: false,
-      isNew: false,
-      categoryId: categories.pouch.id,
-      optionSchema: pouchOptionSchema,
+      name: "30수 광목 세로형 조리개 파우치 160x160",
+      shortDesc: "정사각 160×160 광목 조리개 파우치",
+      description:
+        "30수 광목으로 만든 160×160 조리개 파우치입니다. 정사각 면에 로고·일러스트를 올리기 좋고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 2,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/160160_front.png",
+      categoryId: categories["drawstring-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/160160_front.png", 1254, 1254, 0.28, 0.36, 0.44, 0.4, 0),
+        mockupFace("back", "/mockups/160160_back.png", 1254, 1254, 0.28, 0.36, 0.44, 0.4, 1),
+      ],
+    },
+    {
+      slug: "beige-rope-drawstring-pouch",
+      builderType: "pouch",
+      name: "베이지 로프끈 조리개 파우치",
+      shortDesc: "베이지 로프끈이 포인트인 조리개 파우치",
+      description:
+        "두꺼운 베이지 로프끈이 달린 조리개 파우치입니다. 본체와 끈의 질감이 잘 드러나며, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 3,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/drawstring_front.png",
+      categoryId: categories["drawstring-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/drawstring_front.png", 1279, 1230, 0.26, 0.34, 0.48, 0.42, 0),
+        mockupFace("back", "/mockups/drawstring_back.png", 1395, 1127, 0.28, 0.3, 0.44, 0.42, 1),
+      ],
+    },
+    {
+      slug: "raw-20s-mini-drawstring-pouch",
+      builderType: "pouch",
+      name: "20수 생지 미니 조리개 파우치",
+      shortDesc: "20수 생지 미니 사이즈 조리개 파우치",
+      description:
+        "20수 생지로 만든 미니 조리개 파우치입니다. 소형 굿즈·답례품용으로 적합하고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 4,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/20_mini_front.png",
+      categoryId: categories["drawstring-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/20_mini_front.png", 1254, 1254, 0.28, 0.38, 0.44, 0.38, 0),
+        mockupFace("back", "/mockups/20_mini_back.png", 1254, 1254, 0.28, 0.38, 0.44, 0.38, 1),
+      ],
+    },
+    // ── 덮개형·플랫 더스트백 4종 ──
+    {
+      slug: "raw-20s-flap-dust-bag",
+      builderType: "pouch",
+      name: "20수 생지 덮개형 더스트백",
+      shortDesc: "20수 생지 덮개형 플랫 더스트백",
+      description:
+        "20수 생지로 만든 덮개형 더스트백입니다. 플랩으로 입구를 가릴 수 있고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 1,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/0001.png",
+      categoryId: categories["flat-dust-bag"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/0001.png", 1254, 1254, 0.26, 0.36, 0.48, 0.42, 0),
+        mockupFace("back", "/mockups/0002.png", 1254, 1254, 0.26, 0.34, 0.48, 0.44, 1),
+      ],
+    },
+    {
+      slug: "raw-20s-rib-loop-sachet",
+      builderType: "pouch",
+      name: "20수 생지 골직 고리 샤쉐 파우치",
+      shortDesc: "골직 고리가 달린 생지 샤쉐 파우치",
+      description:
+        "20수 생지에 골직 고리를 단 샤쉐 파우치입니다. 걸거나 걸쇠에 끼워 쓰기 좋고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 2,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/0003.png",
+      categoryId: categories["flat-dust-bag"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/0003.png", 1254, 1254, 0.28, 0.38, 0.44, 0.4, 0),
+        mockupFace("back", "/mockups/0004.png", 1254, 1254, 0.28, 0.38, 0.44, 0.4, 1),
+      ],
+    },
+    {
+      slug: "nonwoven-ultrasonic-flap-dust-bag",
+      builderType: "pouch",
+      name: "부직포 초음파 덮개형 더스트백",
+      shortDesc: "초음파 접합 부직포 덮개형 더스트백",
+      description:
+        "부직포를 초음파로 접합한 덮개형 더스트백입니다. 가볍고 대량 제작에 적합하며, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 3,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/0005.png",
+      categoryId: categories["flat-dust-bag"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/0005.png", 1254, 1254, 0.24, 0.34, 0.52, 0.42, 0),
+        mockupFace("back", "/mockups/0006.png", 1254, 1254, 0.24, 0.34, 0.52, 0.42, 1),
+      ],
+    },
+    {
+      slug: "foldable-nonwoven-flat-dust-bag",
+      builderType: "pouch",
+      name: "접이식 부직포 플랫 더스트백",
+      shortDesc: "접어 보관하기 쉬운 부직포 플랫 더스트백",
+      description:
+        "접어서 보관하기 쉬운 부직포 플랫 더스트백입니다. 포장·보관용으로 쓰기 좋고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 4,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/0007.png",
+      categoryId: categories["flat-dust-bag"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/0007.png", 1254, 1254, 0.24, 0.34, 0.52, 0.42, 0),
+        mockupFace("back", "/mockups/0008.png", 1254, 1254, 0.24, 0.34, 0.52, 0.42, 1),
+      ],
+    },
+    // ── 지퍼파우치 3종 ──
+    {
+      slug: "4color-canvas-zipper-pouch",
+      builderType: "pouch",
+      name: "4색 캔버스 지퍼 파우치",
+      shortDesc: "컬러 캔버스 지퍼 파우치",
+      description:
+        "여러 색상으로 고를 수 있는 캔버스 지퍼 파우치입니다. 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 1,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/01_TOVE_pink_front.png",
+      categoryId: categories["zipper-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/01_TOVE_pink_front.png", 900, 900, 0.18, 0.32, 0.64, 0.42, 0),
+        mockupFace("back", "/mockups/01_TOVE_pink_back.png", 900, 900, 0.18, 0.32, 0.64, 0.42, 1),
+      ],
+    },
+    {
+      slug: "webbing-tyvek-vertical-zipper-bag",
+      builderType: "pouch",
+      name: "웨빙손잡이 세로형 타이벡 지퍼백",
+      shortDesc: "웨빙 손잡이 타이벡 세로 지퍼백",
+      description:
+        "웨빙 손잡이가 달린 세로형 타이벡 지퍼백입니다. 가볍고 내구성이 좋으며, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 2,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/02_white_black_handle_front.png",
+      categoryId: categories["zipper-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/02_white_black_handle_front.png", 900, 900, 0.28, 0.34, 0.44, 0.42, 0),
+        mockupFace("back", "/mockups/02_white_black_handle_back.png", 900, 900, 0.28, 0.34, 0.44, 0.42, 1),
+      ],
+    },
+    {
+      slug: "blue-zipper-graphic-canvas-pouch",
+      builderType: "pouch",
+      name: "파란 지퍼·그래픽 캔버스 파우치",
+      shortDesc: "파란 지퍼가 포인트인 캔버스 파우치",
+      description:
+        "파란 지퍼가 포인트인 캔버스 파우치입니다. 그래픽·로고 인쇄에 적합하고, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 3,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/03_blue_graphic_white_front.png",
+      categoryId: categories["zipper-pouch"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/03_blue_graphic_white_front.png", 900, 900, 0.2, 0.3, 0.6, 0.44, 0),
+        mockupFace("back", "/mockups/03_blue_graphic_white_back.png", 900, 900, 0.2, 0.3, 0.6, 0.44, 1),
+      ],
+    },
+    // ── 부직포 제품 ──
+    {
+      slug: "charcoal-nonwoven-diecut-handle-bag",
+      builderType: "shopping-bag",
+      name: "차콜 부직포 다이컷 손잡이 백",
+      shortDesc: "차콜 부직포 다이컷 손잡이 백",
+      description:
+        "차콜 컬러 부직포로 만든 다이컷 손잡이 백입니다. 가볍고 대량 제작에 적합하며, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 1,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/H2W_front_transparent.png",
+      categoryId: categories["nonwoven"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige", "black"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/H2W_front_transparent.png", 649, 1112, 0.22, 0.38, 0.56, 0.4, 0),
+        mockupFace("back", "/mockups/H2W_back_transparent.png", 656, 1105, 0.22, 0.38, 0.56, 0.4, 1),
+      ],
+    },
+    // ── 기타가방·특수제작 2종 ──
+    {
+      slug: "corner-reinforced-black-poly-drawstring-backpack",
+      builderType: "pouch",
+      name: "모서리 보강 블랙 폴리 조리개 백팩",
+      shortDesc: "모서리 보강 블랙 폴리 조리개 백팩",
+      description:
+        "모서리를 보강한 블랙 폴리 소재 조리개 백팩입니다. 가볍고 내구성이 좋으며, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 1,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/black_front_fixed.png",
+      categoryId: categories["custom-bags"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige", "black"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/black_front_fixed.png", 708, 710, 0.28, 0.32, 0.44, 0.42, 0),
+        mockupFace("back", "/mockups/black_back_fixed.png", 708, 710, 0.28, 0.32, 0.44, 0.42, 1),
+      ],
+    },
+    {
+      slug: "print-strap-tyvek-drawstring-backpack",
+      builderType: "pouch",
+      name: "인쇄 스트랩 타이벡 조리개 배낭",
+      shortDesc: "인쇄 스트랩 타이벡 조리개 배낭",
+      description:
+        "스트랩에 인쇄가 가능한 타이벡 조리개 배낭입니다. 가볍고 접어 보관하기 좋으며, 앞면·뒷면에 디자인을 올릴 수 있습니다.",
+      basePrice: 0,
+      sortOrder: 2,
+      isFeatured: true,
+      isNew: true,
+      thumbnailUrl: "/mockups/white_front.png",
+      categoryId: categories["custom-bags"].id,
+      optionSchema: {
+        sizes: ["S", "M", "L"],
+        fabrics: ["canvas"],
+        colors: ["cream", "white", "ivory", "beige", "black"],
+      },
+      faces: [
+        mockupFace("front", "/mockups/white_front.png", 610, 547, 0.28, 0.32, 0.44, 0.42, 0),
+        mockupFace("back", "/mockups/white_back.png", 610, 547, 0.28, 0.32, 0.44, 0.42, 1),
+      ],
     },
   ];
 
   const products: Record<string, { id: string }> = {};
 
   for (const p of productDefs) {
+    const { faces, ...data } = p;
     const row = await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
-        name: p.name,
-        shortDesc: p.shortDesc,
-        description: p.description,
-        basePrice: p.basePrice,
-        sortOrder: p.sortOrder,
-        isFeatured: p.isFeatured,
-        isNew: p.isNew,
-        categoryId: p.categoryId,
-        builderType: p.builderType,
-        saleType: "CUSTOM" as const,
-        optionSchema: p.optionSchema,
+        name: data.name,
+        shortDesc: data.shortDesc,
+        description: data.description,
+        basePrice: data.basePrice,
+        sortOrder: data.sortOrder,
+        isFeatured: data.isFeatured,
+        isNew: data.isNew,
+        categoryId: data.categoryId,
+        builderType: data.builderType,
+        saleType: "CUSTOM",
+        optionSchema: data.optionSchema,
+        thumbnailUrl: data.thumbnailUrl,
         isActive: true,
         stockQuantity: null,
       },
       create: {
-        ...p,
-        saleType: "CUSTOM" as const,
+        ...data,
+        saleType: "CUSTOM",
       },
     });
     products[p.slug] = row;
-  }
 
-  // ── 기성품 ──
-  const readyMadeDefs = [
-    {
-      slug: "ready-ecobag-basic",
-      builderType: "ecobag",
-      name: "기성 에코백 베이직",
-      shortDesc: "무인쇄 기본형 · 바로 배송",
-      description: "커스텀 없이 바로 구매하는 기본 에코백입니다.",
-      basePrice: 4500,
-      sortOrder: 100,
-      isFeatured: true,
-      isNew: false,
-      categoryId: categories.ecobag.id,
-      stockQuantity: 120,
-    },
-    {
-      slug: "ready-ecobag-navy",
-      builderType: "ecobag",
-      name: "기성 에코백 네이비",
-      shortDesc: "네이비 컬러 · 재고 보유",
-      description: "네이비 원단 기성 에코백. 인쇄 없이 즉시 출고 가능.",
-      basePrice: 4800,
-      sortOrder: 101,
-      isFeatured: false,
-      isNew: true,
-      categoryId: categories.ecobag.id,
-      stockQuantity: 80,
-    },
-    {
-      slug: "ready-shopping-mart",
-      builderType: "shopping-bag",
-      name: "기성 장바구니 마트형",
-      shortDesc: "장보기용 · 대용량",
-      description: "마트·시장용 기성 장바구니.",
-      basePrice: 3900,
-      sortOrder: 110,
-      isFeatured: true,
-      isNew: false,
-      categoryId: categories["shopping-bag"].id,
-      stockQuantity: 60,
-    },
-    {
-      slug: "ready-shopping-compact",
-      builderType: "shopping-bag",
-      name: "기성 장바구니 컴팩트",
-      shortDesc: "가벼운 일상용",
-      description: "가벼운 데일리 장바구니 기성품.",
-      basePrice: 3500,
-      sortOrder: 111,
-      isFeatured: false,
-      isNew: true,
-      categoryId: categories["shopping-bag"].id,
-      stockQuantity: 95,
-    },
-    {
-      slug: "ready-pouch-zip",
-      builderType: "pouch",
-      name: "기성 지퍼 파우치",
-      shortDesc: "단색 · 바로 구매",
-      description: "무지 지퍼 파우치 기성품.",
-      basePrice: 2800,
-      sortOrder: 120,
-      isFeatured: true,
-      isNew: false,
-      categoryId: categories.pouch.id,
-      stockQuantity: 200,
-    },
-    {
-      slug: "ready-pouch-set",
-      builderType: "pouch",
-      name: "기성 파우치 3종 세트",
-      shortDesc: "S/M/L 세트",
-      description: "사이즈별 3종 파우치 세트 기성품.",
-      basePrice: 7900,
-      sortOrder: 121,
-      isFeatured: true,
-      isNew: true,
-      categoryId: categories.pouch.id,
-      stockQuantity: 40,
-    },
-  ];
-
-  for (const p of readyMadeDefs) {
-    const row = await prisma.product.upsert({
-      where: { slug: p.slug },
-      update: {
-        name: p.name,
-        shortDesc: p.shortDesc,
-        description: p.description,
-        basePrice: p.basePrice,
-        sortOrder: p.sortOrder,
-        isFeatured: p.isFeatured,
-        isNew: p.isNew,
-        categoryId: p.categoryId,
-        builderType: p.builderType,
-        saleType: "READYMADE" as const,
-        stockQuantity: p.stockQuantity,
-        optionSchema: { shippingFee: 3000 },
-        isActive: true,
-        minQuantity: 1,
-        maxQuantity: 99,
-      },
-      create: {
-        ...p,
-        saleType: "READYMADE" as const,
-        optionSchema: { shippingFee: 3000 },
-        minQuantity: 1,
-        maxQuantity: 99,
-      },
-    });
-    products[p.slug] = row;
-  }
-
-  // ── 에코백 빌더 목업 면 (관리자가 수정한 구성은 덮어쓰지 않음) ──
-  const ecobagMockups = [
-    {
-      side: "front",
-      label: "앞면",
-      imageUrl: "/mockups/ecobag-front-removebg-preview.png",
-      imageWidth: 394,
-      imageHeight: 526,
-      printX: 0.1,
-      printY: 0.3,
-      printW: 0.8,
-      printH: 0.62,
-      sortOrder: 0,
-    },
-    {
-      side: "back",
-      label: "뒷면",
-      imageUrl: "/mockups/ecobag-back.png",
-      imageWidth: 430,
-      imageHeight: 548,
-      printX: 0.1,
-      printY: 0.3,
-      printW: 0.8,
-      printH: 0.62,
-      sortOrder: 1,
-    },
-    {
-      side: "side",
-      label: "측면",
-      imageUrl: "/mockups/ecobag-front-removebg-preview.png",
-      imageWidth: 394,
-      imageHeight: 526,
-      printX: 0.2,
-      printY: 0.35,
-      printW: 0.55,
-      printH: 0.45,
-      sortOrder: 2,
-    },
-  ];
-
-  const existingMockupCount = await prisma.productMockupFace.count({
-    where: { productId: products.ecobag.id },
-  });
-  if (existingMockupCount === 0) {
+    await prisma.productMockupFace.deleteMany({ where: { productId: row.id } });
     await prisma.productMockupFace.createMany({
-      data: ecobagMockups.map((face) => ({
-        productId: products.ecobag.id,
-        ...face,
-      })),
+      data: faces.map((face) => ({ productId: row.id, ...face })),
     });
-  }
-
-  // 동일 builderType 커스텀 상품에 목업이 없으면 기준 상품에서 복제
-  const mockupSourceByType: Record<string, string> = {
-    ecobag: "ecobag",
-    "shopping-bag": "shopping-bag",
-    pouch: "pouch",
-  };
-  for (const p of productDefs) {
-    const sourceSlug = mockupSourceByType[p.builderType];
-    if (!sourceSlug || p.slug === sourceSlug) continue;
-    const sourceId = products[sourceSlug]?.id;
-    const targetId = products[p.slug]?.id;
-    if (!sourceId || !targetId) continue;
-    const targetCount = await prisma.productMockupFace.count({
-      where: { productId: targetId },
-    });
-    if (targetCount > 0) continue;
-    const sourceFaces = await prisma.productMockupFace.findMany({
-      where: { productId: sourceId },
-    });
-    if (sourceFaces.length === 0) continue;
-    await prisma.productMockupFace.createMany({
-      data: sourceFaces.map((face) => ({
-        productId: targetId,
-        side: face.side,
-        label: face.label,
-        imageUrl: face.imageUrl,
-        imageWidth: face.imageWidth,
-        imageHeight: face.imageHeight,
-        printX: face.printX,
-        printY: face.printY,
-        printW: face.printW,
-        printH: face.printH,
+    await prisma.productImage.deleteMany({ where: { productId: row.id } });
+    await prisma.productImage.createMany({
+      data: faces.map((face) => ({
+        productId: row.id,
+        url: face.imageUrl,
+        alt: `${p.name} ${face.label}`,
         sortOrder: face.sortOrder,
+        isPrimary: face.side === "front",
       })),
     });
   }
+
+  const mockupSourceByType: Record<string, string> = {};
+  const readyMadeDefs: { slug: string }[] = [];
 
   // ── 수량별 할인 ──
-  const discountRules = [
-    { slug: "ecobag", minQuantity: 100, unitPrice: 3800, label: "100개 이상 3,800원" },
-    { slug: "ecobag", minQuantity: 500, unitPrice: 3200, label: "500개 이상 3,200원" },
-    { slug: "shopping-bag", minQuantity: 2000, unitPrice: 2100, label: "2,000개 이상 2,100원" },
-  ];
+  const discountRules: {
+    slug: string;
+    minQuantity: number;
+    unitPrice: number;
+    label: string;
+  }[] = [];
 
   for (const rule of discountRules) {
     const product = products[rule.slug];
+    if (!product) continue;
     const existing = await prisma.quantityDiscountRule.findFirst({
       where: { productId: product.id, minQuantity: rule.minQuantity },
     });
@@ -507,37 +595,8 @@ async function main() {
       create: col,
     });
 
-    const slugs =
-      col.slug === "best"
-        ? [
-            "ecobag",
-            "ecobag-round",
-            "shopping-bag",
-            "shopping-bag-wide",
-            "pouch-flat",
-            "ready-ecobag-basic",
-            "ready-pouch-zip",
-          ]
-        : col.slug === "new"
-          ? [
-              "ecobag-cross",
-              "ecobag-mini",
-              "shopping-bag-fold",
-              "pouch",
-              "pouch-flat",
-              "ready-ecobag-navy",
-              "ready-shopping-compact",
-              "ready-pouch-set",
-            ]
-          : col.slug === "trending"
-            ? [
-                "ecobag",
-                "ecobag-round",
-                "shopping-bag",
-                "pouch-cube",
-                "ready-shopping-mart",
-              ]
-            : ["ecobag", "shopping-bag", "pouch", "ecobag-mini"];
+    const bagSlugs = productDefs.map((p) => p.slug);
+    const slugs = bagSlugs;
 
     for (let i = 0; i < slugs.length; i++) {
       const productId = products[slugs[i]]?.id;
@@ -566,7 +625,7 @@ async function main() {
       title: "당신의 상상이\n현실이 되는 곳",
       subtitle:
         "나만의 디자인으로 만드는 특별한 굿즈 쇼핑몰.\n상상을 현실로 만들어보세요.",
-      linkUrl: "/products/ecobag",
+      linkUrl: "/products/canvas-tote-illustration",
       imageUrl: "/images/final_banner_with_printing_detail.png",
       sortOrder: 0,
     },
@@ -574,7 +633,7 @@ async function main() {
       tag: null,
       title: "원하는 모양 그대로\n에코백 만들기",
       subtitle: "본체와 끈 색을 골라, 나만의 디자인을 한 개부터 제작하세요.",
-      linkUrl: "/products/ecobag",
+      linkUrl: "/products/canvas-tote-illustration",
       imageUrl: "/images/banner2.png",
       sortOrder: 1,
     },
@@ -582,7 +641,7 @@ async function main() {
       tag: null,
       title: "나만의 패턴,\n지퍼 파우치",
       subtitle: "원하는 디자인을 담아, 들고 다니기 좋은 소형 굿즈.",
-      linkUrl: "/products/pouch",
+      linkUrl: "/products/canvas-mini-drawstring",
       imageUrl: "/images/banner3.png",
       sortOrder: 2,
     },
@@ -739,13 +798,13 @@ async function main() {
   // ── 2분컷 템플릿 ──
   const templates = [
     {
-      productSlug: "ecobag",
+      productSlug: "canvas-tote-illustration",
       title: "문구만 바꾸면 완성! 사각 에코백 만들기",
       description: "에코백에 텍스트를 넣어 2분 만에 제작해 보세요.",
       sortOrder: 0,
     },
     {
-      productSlug: "shopping-bag",
+      productSlug: "canvas-cross-strap",
       title: "로고·이미지 업로드! 장바구니 만들기",
       description: "PNG, JPG를 올려 나만의 굿즈를 완성하세요.",
       sortOrder: 1,
@@ -954,9 +1013,11 @@ async function main() {
   }
 
   for (const sec of detailSectionDefs) {
+    const product = products[sec.slug];
+    if (!product) continue;
     await prisma.productDetailSection.create({
       data: {
-        productId: products[sec.slug].id,
+        productId: product.id,
         type: sec.type,
         title: sec.title,
         body: sec.body,
@@ -1026,7 +1087,9 @@ async function main() {
     ];
 
     for (const rev of reviewSamples) {
-      const productId = products[rev.slug].id;
+      const product = products[rev.slug];
+      if (!product) continue;
+      const productId = product.id;
       const exists = await prisma.productReview.findFirst({
         where: { productId, userId: customer.id, content: rev.content },
       });

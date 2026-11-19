@@ -11,6 +11,7 @@ import {
   getPrintExportPixelSize,
   PRINT_EXPORT_DPI,
 } from "./print-export";
+import { loadBuilderFonts } from "@/lib/builder-fonts";
 
 export type ArtworkExportResult = {
   blob: Blob;
@@ -63,6 +64,7 @@ export async function renderArtworkPng(
 
   try {
     handle.updateMockup(options, side, mockupOffset);
+    await loadBuilderFonts();
     await handle.importJson(designJson);
 
     canvas

@@ -83,6 +83,10 @@ export function ProductListPage({
           </aside>
 
           <div className="min-w-0 flex-1">
+            <ProductListCategoryBar
+              activeSlug={categorySlug}
+              categories={listCategories}
+            />
             <div className="border-b border-zinc-200 pb-5">
               <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-[1.75rem]">
                 {heading}
@@ -190,6 +194,38 @@ export function ProductListPage({
 
       <HomeFooter wide />
     </div>
+  );
+}
+
+function ProductListCategoryBar({
+  activeSlug,
+  categories,
+}: {
+  activeSlug: string | null;
+  categories: ProductListCategory[];
+}) {
+  return (
+    <nav
+      aria-label="상품 카테고리"
+      className="mb-5 flex flex-wrap gap-2 sm:gap-2.5"
+    >
+      {categories.map((cat) => {
+        const active = cat.slug === activeSlug;
+        return (
+          <Link
+            key={cat.slug ?? "all"}
+            href={listCategoryHref(cat.slug)}
+            className={`border px-3 py-2 text-sm font-medium transition ${
+              active
+                ? "border-zinc-900 bg-zinc-900 text-white"
+                : "border-zinc-300 bg-white text-zinc-800 hover:border-zinc-500"
+            }`}
+          >
+            {cat.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

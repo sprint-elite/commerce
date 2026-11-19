@@ -1,6 +1,7 @@
 import type { Canvas, FabricObject } from "fabric";
 import type { BuilderOptions, MockupOffset, ViewSide } from "@/types/builder";
 import type { CanvasSelectionState, TextStyleState } from "@/types/text-style";
+import { DEFAULT_BUILDER_FONT } from "@/lib/builder-fonts";
 import type { ImageStyleState } from "@/types/image-style";
 import {
   getCanvasScale,
@@ -499,7 +500,7 @@ export async function createBagCanvas(
       top: defaultCenter.y,
       originX: "center",
       originY: "center",
-      fontFamily: "Arial, sans-serif",
+      fontFamily: DEFAULT_BUILDER_FONT,
       fontSize: 28,
       fill: "#18181b",
     });

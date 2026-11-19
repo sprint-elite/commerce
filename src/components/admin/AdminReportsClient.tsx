@@ -22,10 +22,6 @@ type Report = {
   }>;
 };
 
-function won(n: number) {
-  return new Intl.NumberFormat("ko-KR").format(n) + "원";
-}
-
 export function AdminReportsClient() {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Report | null>(null);
@@ -49,7 +45,7 @@ export function AdminReportsClient() {
     );
   }
 
-  const maxRev = Math.max(1, ...data.daily.map((d) => d.revenue));
+  const maxOrders = Math.max(1, ...data.daily.map((d) => d.orders));
 
   return (
     <div className="space-y-6">
@@ -70,12 +66,9 @@ export function AdminReportsClient() {
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2">
         {[
           ["주문 수", String(data.summary.orderCount)],
-          ["총 주문액", won(data.summary.grossRevenue)],
-          ["입금 완료", won(data.summary.paidRevenue)],
-          ["미입금", won(data.summary.unpaidAmount)],
         ].map(([label, value]) => (
           <div
             key={label}
@@ -88,17 +81,17 @@ export function AdminReportsClient() {
       </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-sm font-bold">일별 매출</h2>
+        <h2 className="text-sm font-bold">일별 접수</h2>
         <div className="mt-4 flex h-40 items-end gap-1">
           {data.daily.map((d) => (
             <div
               key={d.date}
               className="flex flex-1 flex-col items-center justify-end"
-              title={`${d.date}: ${won(d.revenue)}`}
+              title={`${d.date}: ${d.orders}건`}
             >
               <div
                 className="w-full rounded-t bg-slate-800"
-                style={{ height: `${(d.revenue / maxRev) * 100}%`, minHeight: d.revenue ? 4 : 0 }}
+                style={{ height: `${(d.orders / maxOrders) * 100}%`, minHeight: d.orders ? 4 : 0 }}
               />
             </div>
           ))}
@@ -119,7 +112,7 @@ export function AdminReportsClient() {
                   {p.saleType} · {p.orders}건
                 </p>
               </div>
-              <p className="font-semibold">{won(p.revenue)}</p>
+              <p className="font-semibold">{p.orders}건</p>
             </li>
           ))}
         </ul>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Box,
   CircleCheck,
-  CreditCard,
+  ClipboardList,
   Package,
   Truck,
 } from "lucide-react";
@@ -13,7 +13,7 @@ import {
 import { MyOrderTableRow, ORDER_TABLE_GRID } from "./MyOrderTableRow";
 import type { Order } from "@/types";
 
-const STAGE_ICONS = [CreditCard, Package, Box, Truck, CircleCheck] as const;
+const STAGE_ICONS = [ClipboardList, Package, Box, Truck, CircleCheck] as const;
 
 interface MyOrderStatusSectionProps {
   orders: Order[];
@@ -71,7 +71,6 @@ export function MyOrderStatusSection({
         <span>주문일자 / 주문번호</span>
         <span>상품정보</span>
         <span className="text-center">수량</span>
-        <span className="text-right">주문금액</span>
         <span className="text-center">주문상태</span>
         <span className="text-center" />
       </div>

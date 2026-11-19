@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
 import { Star } from "lucide-react";
-import { calculatePrice, formatKRW, resolveShippingFee, SHIPPING_FEE } from "@/lib/pricing";
 import { getProductTitle } from "@/lib/fabric/mockup-builder";
 import { useBuilderStore } from "@/store";
 import {
@@ -42,29 +40,7 @@ export function OrderPanel({
   const options = useBuilderStore((s) => s.options);
   const setOption = useBuilderStore((s) => s.setOption);
 
-  const pricingCtx = useMemo(
-    () =>
-      product
-        ? {
-            basePrice: product.basePrice,
-            quantityDiscounts: product.quantityDiscounts,
-          }
-        : undefined,
-    [product],
-  );
-
-  const price = useMemo(
-    () => calculatePrice(options, pricingCtx),
-    [options, pricingCtx],
-  );
-
   const sizeOptions = product?.optionSchema?.sizes ?? ALL_SIZES;
-  const baseShipping = product?.optionSchema?.shippingFee ?? SHIPPING_FEE;
-  const shippingFee = resolveShippingFee(price.totalPrice, baseShipping);
-
-  const grandTotal = compact
-    ? price.totalPrice + shippingFee
-    : price.totalPrice;
 
   const displayTitle = product?.name ?? getProductTitle(options);
   const sizeLabel = SIZE_LABELS[options.size]?.split(" ")[0] ?? options.size;
@@ -84,21 +60,6 @@ export function OrderPanel({
           <p className="mt-1 text-xs leading-relaxed text-zinc-500">
             {product.shortDesc}
           </p>
-        )}
-        <p className="mt-2 text-xl font-bold text-zinc-900">
-          {formatKRW(price.unitPrice)}
-          <span className="ml-1 text-sm font-normal text-zinc-400">/ 개</span>
-        </p>
-        {compact ? (
-          <p className="mt-1 text-xs font-medium text-rose-600">
-            배송비 {shippingFee.toLocaleString("ko-KR")}원 별도
-          </p>
-        ) : (
-          product?.bulkLabel && (
-            <p className="mt-1 text-xs font-medium text-rose-600">
-              {product.bulkLabel}
-            </p>
-          )
         )}
         {ratingDisplay && product && (
           <div className="mt-2 flex items-center gap-1 text-xs text-zinc-500">
@@ -213,23 +174,11 @@ export function OrderPanel({
               label="인쇄면"
               value={PRINT_SIDE_LABELS[options.printSide]}
             />
-            <p className="text-sm text-zinc-500">
-              배송비{" "}
-              <span className="font-medium text-zinc-800">
-                {formatKRW(shippingFee)}
-              </span>
-            </p>
           </>
         )}
       </div>
 
       <div className="border-t border-zinc-100 bg-white p-5">
-        <div className="mb-3 flex items-baseline justify-between">
-          <span className="text-sm text-zinc-500">총 금액</span>
-          <span className="text-xl font-bold text-zinc-900">
-            {formatKRW(grandTotal)}
-          </span>
-        </div>
         {loadedOrderNumber && (
           <p className="mb-3 rounded-lg bg-zinc-50 px-3 py-2 text-center text-xs text-zinc-600">
             불러온 주문{" "}

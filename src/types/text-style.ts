@@ -1,3 +1,10 @@
+import type { ImageStyleState } from "./image-style";
+import {
+  BUILDER_FONT_OPTIONS,
+  BUILDER_FONT_GROUPS,
+  DEFAULT_BUILDER_FONT,
+} from "@/lib/builder-fonts";
+
 export type TextAlignOption = "left" | "center" | "right" | "justify";
 
 export type TextStyleState = {
@@ -13,24 +20,23 @@ export type TextStyleState = {
   charSpacing: number;
 };
 
-import type { ImageStyleState } from "./image-style";
-
 export type CanvasSelectionState =
   | { kind: "none" }
   | { kind: "object" }
   | { kind: "text"; style: TextStyleState }
   | { kind: "image"; style: ImageStyleState };
 
-export const TEXT_FONT_OPTIONS: { label: string; value: string }[] = [
-  { label: "맑은 고딕", value: "'Malgun Gothic', sans-serif" },
-  { label: "Apple SD Gothic", value: "'Apple SD Gothic Neo', sans-serif" },
-  { label: "Arial", value: "Arial, sans-serif" },
-  { label: "Helvetica", value: "Helvetica, sans-serif" },
-  { label: "Georgia", value: "Georgia, serif" },
-  { label: "Times New Roman", value: "'Times New Roman', serif" },
-  { label: "Courier New", value: "'Courier New', monospace" },
-  { label: "Impact", value: "Impact, sans-serif" },
-];
+export {
+  BUILDER_FONT_GROUPS,
+  BUILDER_FONT_OPTIONS,
+  DEFAULT_BUILDER_FONT,
+};
+
+/** @deprecated BUILDER_FONT_OPTIONS 사용 — 하위 호환 */
+export const TEXT_FONT_OPTIONS = BUILDER_FONT_OPTIONS.map(({ label, value }) => ({
+  label,
+  value,
+}));
 
 export const TEXT_SIZE_OPTIONS = [
   12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 96,

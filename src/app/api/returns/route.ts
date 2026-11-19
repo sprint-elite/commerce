@@ -52,9 +52,6 @@ export async function POST(request: Request) {
     if (!order || order.userId !== user.id) {
       return jsonError("주문을 찾을 수 없습니다.", 404);
     }
-    if (order.paymentStatus !== "PAID") {
-      return jsonError("결제 완료 주문만 신청할 수 있습니다.", 400);
-    }
     if (!isReturnEligibleOrderStatus(order.status)) {
       return jsonError(
         "제작·배송이 진행된 주문만 교환·반품을 신청할 수 있습니다.",

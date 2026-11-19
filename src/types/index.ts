@@ -1,3 +1,4 @@
+import type { ProductMockupFaceDto } from "@/lib/product-mockup";
 import type { SavedBuilderPayload } from "./saved-design";
 import type { ProductSaleType } from "@/lib/product-sale-type";
 import type { PaymentStatus } from "@/lib/payment-status";
@@ -86,6 +87,7 @@ export interface OrderItem {
 export interface OrderDetail extends Order {
   customerEmail: string;
   items: OrderItem[];
+  mockupFaces: ProductMockupFaceDto[];
   design: {
     id: string;
     title: string;

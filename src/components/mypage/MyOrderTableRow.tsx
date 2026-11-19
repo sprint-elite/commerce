@@ -3,18 +3,10 @@ import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import type { Order } from "@/types";
 
 export const ORDER_TABLE_GRID =
-  "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_72px_96px_88px_96px]";
+  "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_72px_88px_96px]";
 
 interface MyOrderTableRowProps {
   order: Order;
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    maximumFractionDigits: 0,
-  }).format(price);
 }
 
 function formatOrderDate(iso: string) {
@@ -48,10 +40,6 @@ export function MyOrderTableRow({ order }: MyOrderTableRowProps) {
 
       <p className="text-sm text-zinc-700 sm:text-center">{order.quantity}개</p>
 
-      <p className="text-sm font-semibold text-zinc-900 sm:text-right">
-        {formatPrice(order.totalPrice)}
-      </p>
-
       <p className="text-sm font-medium text-sky-600 sm:text-center">
         {ORDER_STATUS_LABELS[order.status]}
       </p>
@@ -63,16 +51,6 @@ export function MyOrderTableRow({ order }: MyOrderTableRowProps) {
         >
           상세
         </Link>
-        {order.trackingNumber?.trim() ? (
-          <a
-            href={`https://search.naver.com/search.naver?query=${encodeURIComponent(order.trackingNumber.trim())}+배송조회`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
-          >
-            배송조회
-          </a>
-        ) : null}
         {order.saleType === "CUSTOM" ? (
           <Link
             href={builderHref}

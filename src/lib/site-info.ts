@@ -1,14 +1,15 @@
-/** 푸터·법적 고지용 사업자/CS 정보 (운영 시 실제 값으로 교체) */
+/** 푸터·법적 고지용 사업자 정보 */
 export const SITE_INFO = {
   brandName: "JH MAKER",
-  companyName: "주식회사 제이에이치메이커",
-  ceoName: "홍길동",
-  businessNumber: "000-00-00000",
-  mailOrderNumber: "제0000-서울강남-0000호",
-  address: "서울특별시 강남구 테헤란로 000, 00층",
-  email: "help@jhmaker.com",
-  phone: "02-0000-0000",
-  hours: "평일 10:00 ~ 18:00 (주말·공휴일 휴무)",
+  companyName: "정희산업",
+  ceoName: "백승곤",
+  businessNumber: "104-06-84774",
+  /** 통신판매업 신고 없음 — 푸터에 미표시 */
+  mailOrderNumber: "",
+  address: "서울특별시 중구 을지로 27가길 7, 1층",
+  email: "jungheeind@hanmail.net",
+  phone: "",
+  hours: "평일 09:00~18:00 (주말 공휴일 휴무)",
   bankAccount: "국민은행 000000-00-000000",
-  bankHolder: "주식회사 제이에이치메이커",
+  bankHolder: "정희산업",
 } as const;

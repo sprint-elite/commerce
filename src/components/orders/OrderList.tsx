@@ -5,13 +5,6 @@ interface OrderListProps {
   orders: Order[];
 }
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-  }).format(price);
-}
-
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -49,9 +42,6 @@ export function OrderList({ orders }: OrderListProps) {
               수량
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">
-              금액
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">
               상태
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">
@@ -73,9 +63,6 @@ export function OrderList({ orders }: OrderListProps) {
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600">
                 {order.quantity}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900">
-                {formatPrice(order.totalPrice)}
               </td>
               <td className="whitespace-nowrap px-4 py-3">
                 <OrderStatusBadge status={order.status} />

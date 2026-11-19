@@ -1,5 +1,6 @@
 import type { ProductType } from "@/types/builder";
 import { fetchStorefrontCategories } from "@/lib/admin-catalog";
+import { STOREFRONT_CATEGORY_DEFS } from "@/lib/storefront-categories";
 
 export type ProductListSort = "recommended" | "price-asc" | "price-desc";
 
@@ -11,10 +12,12 @@ export type ProductListCategory = {
 
 /** 헤더 등 클라이언트용 기본 카테고리 (DB와 시드 동기화) */
 export const FALLBACK_PRODUCT_LIST_CATEGORIES: ProductListCategory[] = [
-  { slug: null, label: "전체 상품", heading: "전체 상품" },
-  { slug: "ecobag", label: "에코백", heading: "에코백" },
-  { slug: "shopping-bag", label: "장바구니", heading: "장바구니" },
-  { slug: "pouch", label: "파우치", heading: "파우치" },
+  { slug: null, label: "전체", heading: "전체 상품" },
+  ...STOREFRONT_CATEGORY_DEFS.map((c) => ({
+    slug: c.slug,
+    label: c.name,
+    heading: c.name,
+  })),
 ];
 
 export const PRODUCT_LIST_SORT_OPTIONS: {
@@ -31,7 +34,7 @@ export async function fetchProductListCategories(): Promise<
 > {
   const rows = await fetchStorefrontCategories();
   return [
-    { slug: null, label: "전체 상품", heading: "전체 상품" },
+    { slug: null, label: "전체", heading: "전체 상품" },
     ...rows.map((c) => ({
       slug: c.slug,
       label: c.name,

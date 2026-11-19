@@ -4,24 +4,12 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Check, Loader2, Minus, Plus } from "lucide-react";
-import { ShippingAddressFields } from "@/components/checkout/ShippingAddressFields";
 import { WishlistButton } from "@/components/product/WishlistButton";
 import { useAuth } from "@/hooks/useAuth";
 import type { ProductDetailDto } from "@/lib/catalog";
 import { PRODUCT_DISPLAY_IMAGES } from "@/lib/home-data";
-import {
-  calculateReadyMadePrice,
-  formatKRW,
-  FREE_SHIPPING_THRESHOLD,
-  resolveShippingFee,
-  SHIPPING_FEE,
-} from "@/lib/pricing";
-import {
-  validateShippingInput,
-  type OrderShippingInput,
-} from "@/lib/order-shipping";
 import { PRODUCT_PAGE_CONTAINER } from "@/lib/product-layout";
 
 interface ReadyMadeProductViewProps {
@@ -54,25 +42,7 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
   const [guestEmail, setGuestEmail] = useState("");
-  const [shipping, setShipping] = useState<OrderShippingInput>({
-    shippingName: "",
-    shippingPhone: "",
-    shippingAddress: "",
-    shippingZip: "",
-    notes: "",
-  });
 
-  const price = useMemo(
-    () =>
-      calculateReadyMadePrice(quantity, {
-        basePrice: product.basePrice,
-        quantityDiscounts: product.quantityDiscounts,
-      }),
-    [quantity, product.basePrice, product.quantityDiscounts],
-  );
-
-  const shippingFee = resolveShippingFee(price.totalPrice, SHIPPING_FEE);
-  const payTotal = price.totalPrice + shippingFee;
   const outOfStock =
     product.stockQuantity != null && product.stockQuantity <= 0;
   const stockShort =
@@ -80,7 +50,27 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
     product.stockQuantity > 0 &&
     quantity > product.stockQuantity;
 
-  const imageSrc = PRODUCT_DISPLAY_IMAGES[product.productType] ?? null;
+  const gallery =
+    product.images.length > 0
+      ? product.images
+      : product.thumbnailUrl
+        ? [
+            {
+              id: "thumb",
+              url: product.thumbnailUrl,
+              alt: product.name,
+              isPrimary: true,
+            },
+          ]
+        : [];
+  const fallbackSrc = PRODUCT_DISPLAY_IMAGES[product.productType] ?? null;
+  const [activeImageId, setActiveImageId] = useState(
+    () =>
+      gallery.find((img) => img.isPrimary)?.id ?? gallery[0]?.id ?? null,
+  );
+  const activeImage =
+    gallery.find((img) => img.id === activeImageId) ?? gallery[0] ?? null;
+  const imageSrc = activeImage?.url || fallbackSrc;
   const noticeText = product.noticeItems
     .map((n) => (n.label ? `${n.label}: ${n.value}` : n.value))
     .filter(Boolean)
@@ -130,12 +120,6 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
 
   const submit = async () => {
     setError(null);
-    const shippingError = validateShippingInput(shipping);
-    if (shippingError) {
-      setError(shippingError);
-      setBuyOpen(true);
-      return;
-    }
     if (!user) {
       const email = guestEmail.trim().toLowerCase();
       if (!email || !email.includes("@")) {
@@ -156,7 +140,11 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
         body: JSON.stringify({
           productSlug: product.slug,
           quantity,
-          ...shipping,
+          shippingName: "",
+          shippingPhone: "",
+          shippingAddress: "",
+          shippingZip: "",
+          notes: "",
           ...(user ? {} : { email: guestEmail.trim().toLowerCase() }),
         }),
       });
@@ -165,8 +153,8 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
         error?: string;
       };
       if (!res.ok) throw new Error(data.error ?? "주문에 실패했습니다.");
-      if (data.order?.id) {
-        router.push(`/checkout/${data.order.id}`);
+      if (data.order?.id && user) {
+        router.push(`/mypage/orders/${data.order.id}`);
         return;
       }
       setSuccessOrderNo(data.order?.orderNumber ?? null);
@@ -192,7 +180,11 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
               <>
                 <li>
                   <Link
-                    href={`/products/list/${product.productType === "shopping-bag" ? "shopping-bag" : product.productType}`}
+                    href={
+                      product.categorySlug
+                        ? `/products/list/${product.categorySlug}`
+                        : "/products/list"
+                    }
                     className="hover:text-zinc-700"
                   >
                     {product.categoryName}
@@ -207,21 +199,52 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           {/* 이미지 — 카드 없음 */}
-          <div className="relative aspect-square w-full bg-zinc-50">
-            {imageSrc ? (
-              <Image
-                src={imageSrc}
-                alt={product.name}
-                fill
-                className="object-contain p-6 sm:p-10"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-zinc-400">
-                상품 이미지
+          <div>
+            <div className="relative aspect-square w-full bg-zinc-50">
+              {imageSrc ? (
+                <Image
+                  src={imageSrc}
+                  alt={activeImage?.alt || product.name}
+                  fill
+                  className="object-contain p-6 sm:p-10"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  priority
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+                  상품 이미지
+                </div>
+              )}
+            </div>
+            {gallery.length > 1 ? (
+              <div className="mt-3 flex gap-2">
+                {gallery.map((img) => {
+                  const selected = img.id === (activeImage?.id ?? null);
+                  return (
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => setActiveImageId(img.id)}
+                      className={`relative h-16 w-16 overflow-hidden rounded-lg border bg-zinc-50 ${
+                        selected
+                          ? "border-zinc-900 ring-1 ring-zinc-900"
+                          : "border-zinc-200 hover:border-zinc-400"
+                      }`}
+                      aria-label={img.alt || "상품 이미지"}
+                      aria-pressed={selected}
+                    >
+                      <Image
+                        src={img.url}
+                        alt={img.alt || product.name}
+                        fill
+                        className="object-contain p-1.5"
+                        sizes="64px"
+                      />
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* 구매 정보 — 표형 레이아웃 */}
@@ -233,32 +256,6 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
 
             <dl className="mt-6 border-t border-zinc-200">
               <InfoRow label="상품명">{product.name}</InfoRow>
-              <InfoRow label="판매가">
-                <span className="text-lg font-bold text-zinc-900">
-                  {formatKRW(price.unitPrice)}
-                </span>
-                {price.unitPrice < product.basePrice ? (
-                  <span className="ml-2 text-sm text-zinc-400 line-through">
-                    {formatKRW(product.basePrice)}
-                  </span>
-                ) : null}
-                <span className="ml-1 text-xs text-zinc-400">/개</span>
-              </InfoRow>
-              <InfoRow label="배송비">
-                {shippingFee === 0 ? (
-                  <span className="font-semibold text-zinc-900">무료</span>
-                ) : (
-                  <>
-                    <span className="font-semibold text-zinc-900">
-                      {formatKRW(SHIPPING_FEE)}
-                    </span>
-                    <span className="text-zinc-500">
-                      {" "}
-                      ({formatKRW(FREE_SHIPPING_THRESHOLD)} 이상 구매 시 무료)
-                    </span>
-                  </>
-                )}
-              </InfoRow>
               {product.shortDesc ? (
                 <InfoRow label="설명">{product.shortDesc}</InfoRow>
               ) : null}
@@ -327,41 +324,6 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
                 ) : null}
               </InfoRow>
             </dl>
-
-            {product.quantityDiscounts.some((d) => d.unitPrice != null) ? (
-              <div className="mt-3 space-y-1 text-xs text-zinc-500">
-                {product.quantityDiscounts
-                  .filter((d) => d.unitPrice != null)
-                  .map((d) => (
-                    <p key={d.minQuantity}>
-                      {d.minQuantity}개 이상{" "}
-                      <span className="font-medium text-zinc-800">
-                        {formatKRW(d.unitPrice!)}
-                      </span>
-                    </p>
-                  ))}
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex items-end justify-between border-y border-zinc-200 py-4">
-              <div>
-                <p className="text-xs tracking-wide text-zinc-500">
-                  TOTAL (QUANTITY)
-                </p>
-                <p className="mt-1 text-xs text-zinc-400">
-                  상품 {formatKRW(price.totalPrice)} + 배송{" "}
-                  {shippingFee === 0 ? "무료" : formatKRW(shippingFee)}
-                </p>
-              </div>
-              <p className="text-right">
-                <span className="text-2xl font-bold text-zinc-900">
-                  {formatKRW(payTotal)}
-                </span>
-                <span className="ml-1 text-sm text-zinc-500">
-                  ({quantity}개)
-                </span>
-              </p>
-            </div>
 
             {successOrderNo ? (
               <p className="mt-6 text-sm text-emerald-700">
@@ -435,7 +397,7 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
                 {buyOpen ? (
                   <div className="space-y-4 border border-zinc-200 bg-zinc-50 p-4">
                     <p className="text-sm font-semibold text-zinc-900">
-                      배송 정보
+                      주문 접수
                     </p>
                     {!user ? (
                       <label className="block text-sm">
@@ -463,12 +425,6 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
                         </p>
                       </label>
                     ) : null}
-                    <ShippingAddressFields
-                      value={shipping}
-                      onChange={setShipping}
-                      disabled={submitting}
-                      compact
-                    />
                     <button
                       type="button"
                       disabled={submitting || stockShort}
@@ -478,7 +434,7 @@ export function ReadyMadeProductView({ product }: ReadyMadeProductViewProps) {
                       {submitting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : null}
-                      {formatKRW(payTotal)} 결제하러 가기
+                      주문 접수
                     </button>
                   </div>
                 ) : null}

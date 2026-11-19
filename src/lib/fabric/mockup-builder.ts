@@ -103,7 +103,31 @@ export function getPhotoMockup(
   return PHOTO_MOCKUPS[productType]?.[side] ?? null;
 }
 
-/** DB 목업 면 → PhotoMockup (마스크는 동일 builderType 코드 폴백) */
+const SPLIT_MOCKUP_FILES = new Set([
+  "tote_front-removebg-preview",
+  "tote_back-removebg-preview",
+  "canvas_front-removebg-preview",
+  "canvas_back-removebg-preview",
+  "mini_front-removebg-preview",
+  "mini_back-removebg-preview",
+  "wine_bag_mockup_front-removebg-preview",
+  "wine_bag_mockup_back-removebg-preview",
+]);
+
+/** 스튜디오 사진 목업은 본체·손잡이를 나눠 둔 컷아웃을 쓴다 */
+function splitMockupParts(imageUrl: string): {
+  bodyMaskSrc: string;
+  handleMaskSrc: string;
+} | null {
+  const file = imageUrl.match(/\/mockups\/([^/]+)\.png$/)?.[1];
+  if (!file || !SPLIT_MOCKUP_FILES.has(file)) return null;
+  return {
+    bodyMaskSrc: `/mockups/parts/${file}_body.png?v=3`,
+    handleMaskSrc: `/mockups/parts/${file}_handle.png?v=3`,
+  };
+}
+
+/** DB 목업 면 → PhotoMockup. 분할 컷아웃이 있으면 본체와 손잡이를 따로 칠한다 */
 export function photoMockupFromDbFace(
   face: {
     imageUrl: string;
@@ -124,15 +148,17 @@ export function photoMockupFromDbFace(
     w: face.printW,
     h: face.printH,
   };
+  const usesBuiltinPhoto = Boolean(code && code.src === face.imageUrl);
+  const parts = splitMockupParts(face.imageUrl);
   return {
     src: face.imageUrl,
     width: face.imageWidth,
     height: face.imageHeight,
-    hasAlpha: code?.hasAlpha ?? true,
+    hasAlpha: Boolean(parts) || (usesBuiltinPhoto ? (code?.hasAlpha ?? false) : false),
     print,
-    tint: code?.tint ?? print,
-    bodyMaskSrc: code?.bodyMaskSrc,
-    handleMaskSrc: code?.handleMaskSrc,
+    tint: usesBuiltinPhoto ? (code?.tint ?? print) : print,
+    bodyMaskSrc: parts?.bodyMaskSrc ?? (usesBuiltinPhoto ? code?.bodyMaskSrc : undefined),
+    handleMaskSrc: parts?.handleMaskSrc ?? (usesBuiltinPhoto ? code?.handleMaskSrc : undefined),
   };
 }
 

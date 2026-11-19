@@ -8,9 +8,13 @@ const NAV = [
   { href: "/mypage/wishlist", label: "찜", match: (p: string) => p.startsWith("/mypage/wishlist") },
   { href: "/mypage/coupons", label: "쿠폰", match: (p: string) => p.startsWith("/mypage/coupons") },
   { href: "/mypage/returns", label: "교환·반품", match: (p: string) => p.startsWith("/mypage/returns") },
+  {
+    href: "/mypage/addresses",
+    label: "배송지",
+    match: (p: string) => p.startsWith("/mypage/addresses"),
+  },
   { href: "/inquiry", label: "1:1 문의", match: (p: string) => p.startsWith("/inquiry") },
   { href: "/mypage/profile", label: "내 정보", match: (p: string) => p.startsWith("/mypage/profile") },
-  { href: "/mypage/addresses", label: "배송지", match: (p: string) => p.startsWith("/mypage/addresses") },
 ] as const;
 
 export function MyPageNav() {

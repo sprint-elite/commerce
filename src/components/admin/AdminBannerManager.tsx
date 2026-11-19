@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { AdminImageUploadField } from "@/components/admin/AdminImageUploadField";
 
 type BannerRow = {
   id: string;
@@ -478,13 +479,18 @@ export function AdminBannerManager({
                   </option>
                 ))}
               </select>
+              <AdminImageUploadField
+                label="배너 이미지"
+                variant="dropzone"
+                value={form.imageUrl ?? ""}
+                onChange={(imageUrl) => setForm((f) => ({ ...f, imageUrl }))}
+              />
               {(
                 [
                   ["title", "제목"],
                   ["subtitle", "부제"],
                   ["tag", "태그/이모지"],
                   ["linkUrl", "링크"],
-                  ["imageUrl", "이미지 URL"],
                   ["sortOrder", "정렬"],
                 ] as const
               ).map(([key, label]) => (

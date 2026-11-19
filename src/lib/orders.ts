@@ -6,6 +6,10 @@ import type {
   OrderItem,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import {
+  fetchProductMockupFaces,
+  type ProductMockupFaceDto,
+} from "@/lib/product-mockup";
 import { parseBuilderPayload } from "@/lib/saved-design";
 import type { Order, OrderDetail } from "@/types";
 
@@ -115,6 +119,7 @@ export async function fetchOrdersForUser(userId: string): Promise<Order[]> {
 
 export function toOrderDetailDto(
   order: NonNullable<Awaited<ReturnType<typeof fetchOrderRecord>>>,
+  mockupFaces: ProductMockupFaceDto[] = [],
 ): OrderDetail {
   const base = toOrderDto(order);
   const payload = order.design
@@ -132,6 +137,7 @@ export function toOrderDetailDto(
       quantity: item.quantity,
       unitPrice: item.unitPrice,
     })),
+    mockupFaces,
     design:
       order.design && payload
         ? {
@@ -156,5 +162,6 @@ export async function fetchOrderDetailById(
 ): Promise<OrderDetail | null> {
   const order = await fetchOrderRecord(id);
   if (!order) return null;
-  return toOrderDetailDto(order);
+  const mockupFaces = await fetchProductMockupFaces(order.productId);
+  return toOrderDetailDto(order, mockupFaces);
 }

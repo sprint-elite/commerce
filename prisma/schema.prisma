@@ -504,7 +504,7 @@ model Banner {
 /// 홈 가이드·상황별 굿즈 소개글 (마플형 상세)
 model ContentArticle {
   id            String   @id @default(cuid())
-  /// GUIDE | IDEA
+  /// GUIDE | IDEA | CASE
   type          String
   slug          String   @unique
   title         String

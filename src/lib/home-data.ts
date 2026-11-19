@@ -476,7 +476,7 @@ export const GUIDE_CARDS = [
 ] as const;
 
 /** 메인 리뷰 섹션·리뷰 링크 표시 */
-export const SHOW_HOME_REVIEWS_SECTION = true;
+export const SHOW_HOME_REVIEWS_SECTION = false;
 
 /** 신상품·트렌딩 섹션 표시 */
 export const SHOW_HOME_NEW_AND_TRENDING_SECTIONS = true;
@@ -575,3 +575,45 @@ export const TRUST_STATS = [
   { value: "1개~", label: "최소 주문" },
   { value: "3~5일", label: "평균 제작" },
 ] as const;
+
+/** 메인 제작 사례 — 정희산업 포트폴리오 외부 링크 */
+export const HOME_CASES_VIEW_ALL_URL = "https://www.junghee.co.kr/";
+
+export type HomeCaseStudy = {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  href: string;
+};
+
+export const HOME_CASE_STUDIES: HomeCaseStudy[] = [
+  {
+    id: "english-academy",
+    title: "영어아카데미(학원)",
+    subtitle: "체험용 크로스백 제작 사례",
+    imageUrl: "/images/main1.png",
+    href: "https://www.junghee.co.kr/portfolio/cmu42wtxr009k0kmxtiqqsbw2",
+  },
+  {
+    id: "wine-shop",
+    title: "와인샵",
+    subtitle: "배색 손잡이 보틀백 제작 사례",
+    imageUrl: "/images/main2.png",
+    href: "https://www.junghee.co.kr/portfolio/cmu42wgda009a0kmxj1t3uy8q",
+  },
+  {
+    id: "jewelry-flagship",
+    title: "쥬얼리 플래그십 스토어",
+    subtitle: "일러스트 인쇄 캔버스 토트백 제작 사례",
+    imageUrl: "/images/main3.png",
+    href: "https://www.junghee.co.kr/portfolio/cmu42vzvt00920kmxgirzcgox",
+  },
+  {
+    id: "medical-device",
+    title: "고주파 의료기기 업체",
+    subtitle: "조리개 결합 미니 토트백 제작 사례",
+    imageUrl: "/images/main4.png",
+    href: "https://www.junghee.co.kr/portfolio/cmu42op26004l0kmx2bhny1uj",
+  },
+];

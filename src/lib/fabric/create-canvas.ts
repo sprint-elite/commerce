@@ -1,5 +1,6 @@
 import type { Canvas, FabricObject } from "fabric";
 import type { ProductCanvasConfig } from "./product-canvas";
+import { DEFAULT_BUILDER_FONT } from "@/lib/builder-fonts";
 
 export interface FabricCanvasHandle {
   exportJson: () => string;
@@ -74,7 +75,7 @@ export async function createFabricCanvas(
     const item = new IText(text, {
       left: config.width / 2 - 60,
       top: config.height / 2 - 16,
-      fontFamily: "Arial, sans-serif",
+      fontFamily: DEFAULT_BUILDER_FONT,
       fontSize: 28,
       fill: defaultFill,
     });

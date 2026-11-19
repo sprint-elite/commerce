@@ -9,7 +9,7 @@ const CANCELLABLE = new Set(["PENDING", "AWAITING_PAYMENT"]);
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** 고객: 미결제·입금대기 주문 취소 */
+/** 고객: 접수 단계 주문 취소 */
 export async function POST(_request: Request, context: Ctx) {
   try {
     const user = await requireUser();
@@ -32,12 +32,6 @@ export async function POST(_request: Request, context: Ctx) {
     }
     if (order.status === "CANCELLED") {
       return jsonError("이미 취소된 주문입니다.", 400);
-    }
-    if (order.paymentStatus === "PAID") {
-      return jsonError(
-        "결제 완료 주문은 고객센터로 문의해 주세요.",
-        400,
-      );
     }
     if (!CANCELLABLE.has(order.status)) {
       return jsonError("제작이 진행된 주문은 취소할 수 없습니다.", 400);

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-/** 결제 완료 시 적립 (실결제액 1%) */
+/** 주문 접수 시 적립 (주문 금액 1%) */
 export async function earnPointsForOrder(input: {
   userId: string;
   orderId: string;

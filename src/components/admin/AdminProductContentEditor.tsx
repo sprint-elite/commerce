@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  AdminImageUploadField,
+  uploadAdminImage,
+} from "./AdminImageUploadField";
 
 type Section = {
   type: string;
@@ -360,17 +364,16 @@ export function AdminProductContentEditor({
                 }
                 className="w-full rounded-lg border px-3 py-2 text-sm"
               />
-              <input
+              <AdminImageUploadField
+                label="섹션 이미지"
                 value={s.imageUrl}
-                placeholder="이미지 URL (선택)"
-                onChange={(e) =>
+                onChange={(imageUrl) =>
                   setSections((rows) =>
                     rows.map((r, i) =>
-                      i === idx ? { ...r, imageUrl: e.target.value } : r,
+                      i === idx ? { ...r, imageUrl } : r,
                     ),
                   )
                 }
-                className="w-full rounded-lg border px-3 py-2 text-sm"
               />
             </li>
           ))}
@@ -380,40 +383,61 @@ export function AdminProductContentEditor({
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold">갤러리 이미지</h2>
-          <button
-            type="button"
-            onClick={() =>
-              setImages((imgs) => [
-                ...imgs,
-                {
-                  url: "",
-                  alt: "",
-                  sortOrder: imgs.length,
-                  isPrimary: imgs.length === 0,
-                },
-              ])
-            }
-            className="inline-flex items-center gap-1 text-xs font-semibold"
-          >
+          <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold">
             <Plus className="h-3.5 w-3.5" /> 추가
-          </button>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = "";
+                if (files.length === 0) return;
+                void (async () => {
+                  setMsg(null);
+                  setBusy(true);
+                  try {
+                    const urls: string[] = [];
+                    for (const file of files) {
+                      urls.push(await uploadAdminImage(file));
+                    }
+                    setImages((imgs) => [
+                      ...imgs,
+                      ...urls.map((url, i) => ({
+                        url,
+                        alt: "",
+                        sortOrder: imgs.length + i,
+                        isPrimary: imgs.length === 0 && i === 0,
+                      })),
+                    ]);
+                  } catch (err) {
+                    setMsg(
+                      err instanceof Error ? err.message : "업로드 실패",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                })();
+              }}
+            />
+          </label>
         </div>
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 space-y-3">
           {images.map((img, idx) => (
-            <li key={idx} className="flex flex-wrap gap-2">
-              <input
-                value={img.url}
-                placeholder="이미지 URL"
-                onChange={(e) =>
-                  setImages((rows) =>
-                    rows.map((r, i) =>
-                      i === idx ? { ...r, url: e.target.value } : r,
-                    ),
-                  )
-                }
-                className="min-w-[200px] flex-1 rounded-lg border px-3 py-2 text-sm"
-              />
-              <label className="flex items-center gap-1 text-xs">
+            <li key={`${img.url}-${idx}`} className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <AdminImageUploadField
+                  value={img.url}
+                  allowClear={false}
+                  onChange={(url) =>
+                    setImages((rows) =>
+                      rows.map((r, i) => (i === idx ? { ...r, url } : r)),
+                    )
+                  }
+                />
+              </div>
+              <label className="flex shrink-0 items-center gap-1 text-xs">
                 <input
                   type="checkbox"
                   checked={img.isPrimary}
@@ -433,6 +457,7 @@ export function AdminProductContentEditor({
                 onClick={() =>
                   setImages((rows) => rows.filter((_, i) => i !== idx))
                 }
+                aria-label="삭제"
               >
                 <Trash2 className="h-4 w-4 text-slate-400" />
               </button>

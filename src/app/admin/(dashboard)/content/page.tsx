@@ -1,7 +1,10 @@
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AdminContentManager } from "@/components/admin/AdminContentManager";
-import { articlePath } from "@/lib/content-article";
+import {
+  articlePath,
+  parseContentArticleType,
+} from "@/lib/content-article-types";
 
 export default async function AdminContentPage() {
   await requireAdmin();
@@ -26,7 +29,7 @@ export default async function AdminContentPage() {
         publishedAt: r.publishedAt.toISOString(),
         sortOrder: r.sortOrder,
         isActive: r.isActive,
-        href: articlePath(r.type === "IDEA" ? "IDEA" : "GUIDE", r.slug),
+        href: articlePath(parseContentArticleType(r.type), r.slug),
       }))}
     />
   );

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
-import { articlePath } from "@/lib/content-article";
+import {
+  articlePath,
+  parseContentArticleType,
+} from "@/lib/content-article-types";
 
 export async function GET() {
   try {
@@ -26,7 +29,7 @@ export async function GET() {
         publishedAt: r.publishedAt.toISOString(),
         sortOrder: r.sortOrder,
         isActive: r.isActive,
-        href: articlePath(r.type === "IDEA" ? "IDEA" : "GUIDE", r.slug),
+        href: articlePath(parseContentArticleType(r.type), r.slug),
         updatedAt: r.updatedAt.toISOString(),
       })),
     });
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
       isActive?: boolean;
     };
 
-    const type = body.type === "IDEA" ? "IDEA" : "GUIDE";
+    const type = parseContentArticleType(body.type);
     const slug = body.slug?.trim().toLowerCase() ?? "";
     const title = body.title?.trim() ?? "";
     if (!slug || !title) {

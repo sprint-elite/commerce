@@ -6,8 +6,14 @@ import type {
   GuideFaq,
   GuideSection,
 } from "@/lib/guide-articles";
+import {
+  articlePath,
+  parseContentArticleType,
+  type ContentArticleType,
+} from "@/lib/content-article-types";
 
-export type ContentArticleType = "GUIDE" | "IDEA";
+export type { ContentArticleType } from "@/lib/content-article-types";
+export { articlePath, parseContentArticleType };
 
 export type ContentArticlePayload = {
   type: ContentArticleType;
@@ -96,7 +102,7 @@ export function rowToArticle(row: ContentArticle): GuideArticle & {
   coverImageUrl: string | null;
   cardTag: string | null;
 } {
-  const type = row.type === "IDEA" ? "IDEA" : "GUIDE";
+  const type = parseContentArticleType(row.type);
   return {
     type,
     slug: row.slug,
@@ -114,10 +120,6 @@ export function rowToArticle(row: ContentArticle): GuideArticle & {
     coverImageUrl: row.coverImageUrl,
     cardTag: row.cardTag,
   };
-}
-
-export function articlePath(type: ContentArticleType, slug: string) {
-  return type === "IDEA" ? `/ideas/${slug}` : `/guides/${slug}`;
 }
 
 export async function fetchContentArticleBySlug(
@@ -649,6 +651,138 @@ export const DEFAULT_IDEA_ARTICLES: ContentArticlePayload[] = [
         a: "확정 시안을 저장해 두고 문구·컬러만 바꿔 재주문하면 됩니다.",
       },
     ],
+  },
+];
+
+export const DEFAULT_CASE_ARTICLES: ContentArticlePayload[] = [
+  {
+    type: "CASE",
+    slug: "cafe-open-tote",
+    title: "동네 카페 오픈 토트백",
+    subtitle: "로고 하나만 올려도 테이크아웃 백이 된 사례",
+    date: "2026.10.12",
+    coverImageUrl: "/mockups/canvas_front-removebg-preview.png",
+    cardTag: "카페",
+    cardGradient: "from-stone-100 to-zinc-50",
+    sortOrder: 0,
+    intro: [
+      "오픈을 앞둔 동네 카페에서 일회용 봉투 대신 쓸 토트백을 만들었습니다. 매장 로고와 짧은 슬로건만 앞면에 올려, 음료를 담아 나가는 순간부터 매장 밖 홍보가 되게 했습니다.",
+      "수량은 오픈 주 스태프용과 스탬프 리워드용으로 나눠 잡았고, 색은 크림 본체에 손잡이만 먹색으로 맞춰 매장 인테리어와 톤을 맞췄습니다.",
+    ],
+    sections: [
+      {
+        title: "이렇게 구성했습니다",
+        body: [
+          "인쇄는 앞면 중앙에 로고와 한 줄 문구만 넣었습니다. 원두 이름이나 긴 설명은 빼고, 들고 다닐 때 한눈에 들어오게 여백을 넓게 잡았습니다.",
+          "사이즈는 음료 두 잔과 디저트가 들어가는 M을 기준으로 했고, 뒷면은 비워 두어 시즌 스탬프를 나중에 추가할 수 있게 했습니다.",
+        ],
+        tipsTitle: "카페 굿즈에서 잘 먹힌 점",
+        tips: [
+          "로고는 작게, 여백은 크게",
+          "손잡이 색만 포인트로 분리",
+          "리워드용과 판매용 수량을 나눠 주문",
+        ],
+        productsTitle: "이 사례에 쓴 상품",
+        products: [
+          { slug: "canvas-tote-illustration", caption: "일러스트·로고용 토트백" },
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "로고 파일만 있어도 되나요?",
+        a: "네. 로고만 올려도 제작할 수 있습니다. 배경 정리가 필요하면 주문 메모에 적어 주세요.",
+      },
+    ],
+  },
+  {
+    type: "CASE",
+    slug: "market-crossbody",
+    title: "마켓 셀러 크로스백",
+    subtitle: "양손을 비우는 어깨 스트랩 굿즈",
+    date: "2026.09.28",
+    coverImageUrl: "/mockups/tote_front-removebg-preview.png",
+    cardTag: "마켓",
+    cardGradient: "from-amber-50 to-orange-50",
+    sortOrder: 1,
+    intro: [
+      "플리마켓 셀러가 부스 운영용으로 맞춘 크로스백입니다. 계산과 포장을 하면서도 가방을 내려놓지 않도록 길이 조절 스트랩을 달고, 부스 이름만 작게 인쇄했습니다.",
+      "손님에게 같은 시안을 소량 판매용으로도 쓸 수 있게, 인쇄는 한 가지로 통일하고 색만 크림으로 맞췄습니다.",
+    ],
+    sections: [
+      {
+        title: "현장에서 이렇게 썼습니다",
+        body: [
+          "앞면에는 마켓명과 셀러명을 한 줄로 넣었습니다. 복잡한 일러스트 대신 타이포만 써서, 멀리서도 부스 이름이 읽히게 했습니다.",
+          "스트랩은 네이비로 골라 크림 본체와 대비를 주고, 손잡이는 짧게 남겨 진열할 때도 형태가 무너지지 않게 했습니다.",
+        ],
+        productsTitle: "이 사례에 쓴 상품",
+        products: [
+          { slug: "canvas-cross-strap", caption: "길이 조절 스트랩 크로스백" },
+        ],
+      },
+    ],
+    faq: [],
+  },
+  {
+    type: "CASE",
+    slug: "wine-shop-bottle-bag",
+    title: "와인샵 보틀백",
+    subtitle: "배색 손잡이로 포장과 홍보를 같이",
+    date: "2026.09.04",
+    coverImageUrl: "/mockups/wine_bag_mockup_front-removebg-preview.png",
+    cardTag: "리테일",
+    cardGradient: "from-rose-50 to-red-50",
+    sortOrder: 2,
+    intro: [
+      "병 한두 개를 들고 나가는 손님을 위해 만든 보틀백입니다. 샵 로고를 손잡이 아래 좁은 면에 맞추고, 손잡이만 와인색에 가까운 포인트 컬러로 골랐습니다.",
+      "종이 쇼핑백 대신 재사용 가방으로 바꾸면서, 포장비가 브랜드가 남도록 한 사례입니다.",
+    ],
+    sections: [
+      {
+        title: "인쇄 위치",
+        body: [
+          "보틀백은 인쇄면이 좁아서 로고를 크게 키우지 않았습니다. 병 실루엣을 가리지 않게 상단 중앙에만 배치했습니다.",
+        ],
+        productsTitle: "이 사례에 쓴 상품",
+        products: [
+          {
+            slug: "canvas-bottle-contrast-handle",
+            caption: "배색 손잡이 보틀백",
+          },
+        ],
+      },
+    ],
+    faq: [],
+  },
+  {
+    type: "CASE",
+    slug: "festival-mini-tote",
+    title: "페스티벌 미니 토트",
+    subtitle: "현장 배포용으로 작게, 조리개로 안전하게",
+    date: "2026.08.16",
+    coverImageUrl: "/mockups/mini_front-removebg-preview.png",
+    cardTag: "행사",
+    cardGradient: "from-violet-50 to-zinc-50",
+    sortOrder: 3,
+    intro: [
+      "페스티벌 입장 키트용으로 만든 미니 토트입니다. 티켓과 팜플렛, 작은 굿즈가 들어가게 사이즈를 줄이고, 조리개로 입구를 닫을 수 있게 했습니다.",
+      "날짜와 행사명만 앞면에 넣어 대량 배포에서도 인쇄가 흐리지 않게 했습니다.",
+    ],
+    sections: [
+      {
+        title: "배포용으로 맞춘 점",
+        body: [
+          "한 손에 들어오는 크기라 스태프가 쌓아 두기도 쉽고, 관객은 목에 걸거나 손에 들고 이동할 수 있습니다.",
+          "컬러는 아이보리 본체에 조리개 끈만 포인트 색으로 둬서, 행사 포스터의 메인 컬러와 맞췄습니다.",
+        ],
+        productsTitle: "이 사례에 쓴 상품",
+        products: [
+          { slug: "canvas-mini-drawstring", caption: "조리개 미니 토트백" },
+        ],
+      },
+    ],
+    faq: [],
   },
 ];
 

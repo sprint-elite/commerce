@@ -42,16 +42,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       if (!isOrderStatus(body.status)) {
         return jsonError("유효하지 않은 주문 상태입니다.", 400);
       }
-      if (body.status === "SHIPPED") {
-        const tracking =
-          body.trackingNumber?.trim() || existing.trackingNumber?.trim();
-        if (!tracking) {
-          return jsonError("배송 중으로 변경하려면 송장번호를 입력해 주세요.", 400);
-        }
-        data.trackingNumber = tracking;
-        data.shippedAt = existing.shippedAt ?? new Date();
-      }
       data.status = body.status;
+      if (body.status === "SHIPPED" && !existing.shippedAt) {
+        data.shippedAt = new Date();
+      }
     }
 
     if (body.paymentStatus !== undefined) {
@@ -145,8 +139,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       void notify({
         type: "ORDER_SHIPPED",
         toEmail: order.user.email,
-        subject: `[JH MAKER] 배송 시작 ${order.orderNumber}`,
-        body: `주문 ${order.orderNumber}이(가) 배송되었습니다. 송장: ${order.trackingNumber ?? "-"}`,
+        subject: `[JH MAKER] 작업 완료 ${order.orderNumber}`,
+        body: `주문 ${order.orderNumber} 작업이 완료되었습니다.`,
         meta: { orderId: order.id },
       });
     }

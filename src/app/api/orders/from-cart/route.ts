@@ -3,16 +3,12 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
 import { generateOrderNumber, toOrderDto } from "@/lib/orders";
+import { earnPointsForOrder } from "@/lib/points";
 import {
   normalizeShippingInput,
   validateShippingInput,
 } from "@/lib/order-shipping";
-import {
-  calculateReadyMadePrice,
-  resolveShippingFee,
-} from "@/lib/pricing";
-import { parseProductOptionSchema } from "@/lib/product-option-schema";
-import { getShippingConfig } from "@/lib/shipping";
+import { calculateReadyMadePrice } from "@/lib/pricing";
 import {
   assertStockAvailable,
   decrementStock,
@@ -53,8 +49,6 @@ export async function POST(request: Request) {
       return jsonError("장바구니가 비어 있습니다.", 400);
     }
 
-    const shipCfg = await getShippingConfig();
-
     type LineCalc = {
       productId: string;
       productName: string;
@@ -63,14 +57,12 @@ export async function POST(request: Request) {
       lineSubtotal: number;
       lineDiscount: number;
       lineTotal: number;
-      baseShip: number;
     };
 
     const calcs: LineCalc[] = [];
     let merchandiseTotal = 0;
     let discountAmount = 0;
     let subtotal = 0;
-    let maxBaseShip = shipCfg.shippingFee;
 
     for (const row of lines) {
       const p = row.product;
@@ -85,9 +77,6 @@ export async function POST(request: Request) {
         basePrice: p.basePrice,
         quantityDiscounts: p.quantityDiscounts,
       });
-      const optionSchema = parseProductOptionSchema(p.optionSchema);
-      const baseShip = optionSchema?.shippingFee ?? shipCfg.shippingFee;
-      maxBaseShip = Math.max(maxBaseShip, baseShip);
 
       calcs.push({
         productId: p.id,
@@ -97,18 +86,13 @@ export async function POST(request: Request) {
         lineSubtotal: price.subtotal,
         lineDiscount: price.discountAmount,
         lineTotal: price.totalPrice,
-        baseShip,
       });
       merchandiseTotal += price.totalPrice;
       discountAmount += price.discountAmount;
       subtotal += price.subtotal;
     }
 
-    const shippingFee = resolveShippingFee(
-      merchandiseTotal,
-      maxBaseShip,
-      shipCfg.freeShippingThreshold,
-    );
+    const shippingFee = 0;
     const primary = calcs[0]!;
     const totalQty = calcs.reduce((s, c) => s + c.quantity, 0);
 
@@ -127,9 +111,9 @@ export async function POST(request: Request) {
           subtotal,
           discountAmount,
           shippingFee,
-          totalPrice: merchandiseTotal + shippingFee,
+          totalPrice: merchandiseTotal,
           paymentStatus: "UNPAID",
-          status: "AWAITING_PAYMENT",
+          status: "PENDING",
           notes: shipping.notes,
           shippingName: shipping.shippingName,
           shippingPhone: shipping.shippingPhone,
@@ -155,6 +139,13 @@ export async function POST(request: Request) {
 
       await tx.cartItem.deleteMany({ where: { userId: user.id } });
       return created;
+    });
+
+    void earnPointsForOrder({
+      userId: order.userId,
+      orderId: order.id,
+      orderTotal: order.totalPrice,
+      orderNumber: order.orderNumber,
     });
 
     return NextResponse.json({ order: toOrderDto(order) }, { status: 201 });

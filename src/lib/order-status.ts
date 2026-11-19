@@ -2,11 +2,11 @@ import type { OrderStatus } from "@/types";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "대기",
-  AWAITING_PAYMENT: "입금대기",
+  AWAITING_PAYMENT: "접수",
   CONFIRMED: "확인됨",
   IN_PRODUCTION: "제작 중",
-  SHIPPED: "배송 중",
-  DELIVERED: "배송 완료",
+  SHIPPED: "작업 완료",
+  DELIVERED: "종료",
   CANCELLED: "취소",
 };
 

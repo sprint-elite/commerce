@@ -18,15 +18,12 @@ import { OrderStatusSelect } from "@/components/orders/OrderStatusSelect";
 import { OrderCommentForm } from "@/components/orders/OrderCommentForm";
 import { OrderCommentList } from "@/components/orders/OrderCommentList";
 import { buildAdminBuilderHref } from "@/lib/admin-builder";
-import type { OrderComment, OrderDetail, OrderStatus, Order } from "@/types";
-import { PAYMENT_STATUS_LABELS } from "@/lib/payment-status";
+import type { Order, OrderComment, OrderDetail, OrderStatus } from "@/types";
 import type { SavedBuilderPayload } from "@/types/saved-design";
 import type { ViewSide } from "@/types/builder";
 import {
   APPROVAL_STATUS_LABELS,
   BAG_COLOR_LABELS,
-  BAG_SHAPE_LABELS,
-  CLOSURE_LABELS,
   FABRIC_LABELS,
   HANDLE_LABELS,
   POCKET_LABELS,
@@ -43,14 +40,6 @@ interface OrderDetailModalProps {
   orderId: string | null;
   onClose: () => void;
   onOrderUpdated?: (order: Order) => void;
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    maximumFractionDigits: 0,
-  }).format(price);
 }
 
 function formatDate(iso: string) {
@@ -79,38 +68,6 @@ export function OrderDetailModal({
   );
   const [comments, setComments] = useState<OrderComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [refundBusy, setRefundBusy] = useState(false);
-
-  const handleRefund = useCallback(async () => {
-    if (!orderId || !order) return;
-    if (order.paymentStatus !== "PAID") return;
-    if (!window.confirm("이 주문을 환불 처리할까요? (내부 상태만 변경)")) return;
-    setRefundBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/orders/${orderId}/refund`, {
-        method: "POST",
-      });
-      const data = (await res.json()) as { order?: Order; error?: string };
-      if (!res.ok || !data.order) {
-        throw new Error(data.error ?? "환불 처리 실패");
-      }
-      setOrder((prev) =>
-        prev
-          ? {
-              ...prev,
-              paymentStatus: data.order!.paymentStatus,
-              status: data.order!.status,
-            }
-          : prev,
-      );
-      onOrderUpdated?.(data.order);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "환불 처리 실패");
-    } finally {
-      setRefundBusy(false);
-    }
-  }, [orderId, order, onOrderUpdated]);
 
   const loadComments = useCallback(async (id: string) => {
     setCommentsLoading(true);
@@ -321,8 +278,6 @@ export function OrderDetailModal({
           payload={payload}
           subTab={orderSubTab}
           onSubTabChange={setOrderSubTab}
-          refundBusy={refundBusy}
-          onRefund={() => void handleRefund()}
         />
       );
     }
@@ -458,6 +413,7 @@ export function OrderDetailModal({
                     <DesignPreviewPanel
                       key={order.id}
                       payload={payload}
+                      mockupFaces={order.mockupFaces}
                       side={previewSide}
                       onSideChange={setPreviewSide}
                       annotations={annotations}
@@ -489,7 +445,7 @@ export function OrderDetailModal({
 
 const ORDER_SUB_TABS: { key: OrderSubTabKey; label: string }[] = [
   { key: "customer", label: "고객정보" },
-  { key: "payment", label: "결제정보" },
+  { key: "payment", label: "주문 내용" },
   { key: "product", label: "상품옵션" },
 ];
 
@@ -498,15 +454,11 @@ function OrderDetailSubPanel({
   payload,
   subTab,
   onSubTabChange,
-  refundBusy,
-  onRefund,
 }: {
   order: OrderDetail;
   payload: SavedBuilderPayload | undefined;
   subTab: OrderSubTabKey;
   onSubTabChange: (tab: OrderSubTabKey) => void;
-  refundBusy: boolean;
-  onRefund: () => void;
 }) {
   return (
     <div className="-m-5 flex h-full min-h-0 flex-col">
@@ -540,28 +492,7 @@ function OrderDetailSubPanel({
               />
             </dl>
 
-            <h3 className="mt-5 text-sm font-semibold text-slate-900">
-              배송 · 연락 정보
-            </h3>
-            <dl className="mt-3 space-y-2.5 text-sm">
-              <DetailRow
-                label="고객명"
-                value={order.shippingName ?? "-"}
-              />
-              <DetailRow
-                label="연락처"
-                value={order.shippingPhone ?? "-"}
-              />
-              <DetailRow
-                label="우편번호"
-                value={order.shippingZip ?? "-"}
-              />
-              <DetailRow
-                label="주소"
-                value={order.shippingAddress ?? "-"}
-              />
-            </dl>
-
+            <h3 className="mt-5 text-sm font-semibold text-slate-900">요청사항</h3>
             {order.notes ? (
               <div className="mt-4 rounded-lg border border-amber-200/80 bg-amber-50/80 p-3">
                 <p className="text-xs font-semibold text-amber-900">메모</p>
@@ -577,43 +508,17 @@ function OrderDetailSubPanel({
 
         {subTab === "payment" && (
           <section className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-            <h3 className="text-sm font-semibold text-slate-900">결제 정보</h3>
+            <h3 className="text-sm font-semibold text-slate-900">주문 내용</h3>
             <dl className="mt-3 space-y-2.5 text-sm">
               <DetailRow label="주문번호" value={order.orderNumber} mono />
-              <DetailRow
-                label="결제 상태"
-                value={PAYMENT_STATUS_LABELS[order.paymentStatus]}
-              />
               <DetailRow label="수량" value={`${order.quantity}개`} />
               {order.items[0] && (
-                <>
-                  <DetailRow
-                    label="상품명"
-                    value={order.items[0].productName}
-                  />
-                  <DetailRow
-                    label="단가"
-                    value={formatPrice(order.items[0].unitPrice)}
-                  />
-                </>
+                <DetailRow
+                  label="상품명"
+                  value={order.items[0].productName}
+                />
               )}
-              <DetailRow
-                label="총 금액"
-                value={formatPrice(order.totalPrice)}
-                bold
-              />
             </dl>
-            {order.paymentStatus === "PAID" && (
-              <button
-                type="button"
-                disabled={refundBusy}
-                onClick={onRefund}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
-              >
-                {refundBusy && <Loader2 className="h-4 w-4 animate-spin" />}
-                환불 처리
-              </button>
-            )}
           </section>
         )}
 
@@ -645,14 +550,6 @@ function OrderDetailSubPanel({
                       value={
                         BAG_COLOR_LABELS[payload.options.handleStrapColor]
                       }
-                    />
-                    <DetailRow
-                      label="단추"
-                      value={CLOSURE_LABELS[payload.options.closureType]}
-                    />
-                    <DetailRow
-                      label="에코백 형태"
-                      value={BAG_SHAPE_LABELS[payload.options.bagShape]}
                     />
                   </>
                 )}

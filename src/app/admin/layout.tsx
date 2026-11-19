@@ -1,15 +1,8 @@
-import { redirect } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { getCurrentUser } from "@/lib/auth";
-
-export default async function AdminLayout({
+/** 관리자 영역 공통 래퍼 — 인증은 (dashboard)/(auth) 레이아웃에서 처리 */
+export default function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/admin");
-  if (user.role !== "ADMIN") redirect("/builder");
-
-  return <AdminShell user={user}>{children}</AdminShell>;
+  return children;
 }

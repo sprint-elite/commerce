@@ -18,7 +18,7 @@ export const PRODUCT_SALE_TYPES: {
     value: "READYMADE",
     label: "기성품",
     shortLabel: "기성품",
-    description: "수량·배송만 입력해 주문합니다.",
+    description: "수량만 입력해 주문합니다.",
   },
 ];
 

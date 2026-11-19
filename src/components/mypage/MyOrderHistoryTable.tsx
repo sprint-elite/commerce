@@ -23,7 +23,6 @@ export function MyOrderHistoryTable({ orders }: MyOrderHistoryTableProps) {
         <span>주문일자 / 주문번호</span>
         <span>상품정보</span>
         <span className="text-center">수량</span>
-        <span className="text-right">주문금액</span>
         <span className="text-center">주문상태</span>
         <span className="text-center" />
       </div>

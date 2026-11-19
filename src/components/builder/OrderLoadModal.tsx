@@ -16,14 +16,6 @@ interface OrderLoadModalProps {
   onLoaded: () => void;
 }
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ko-KR", {
     month: "short",
@@ -235,7 +227,6 @@ export function OrderLoadModal({
                             </p>
                             <p className="mt-1 text-xs text-zinc-400">
                               {formatDate(order.createdAt)} · {order.quantity}개
-                              · {formatPrice(order.totalPrice)}
                             </p>
                             {!hasDesign && (
                               <p className="mt-1 text-xs text-amber-600">

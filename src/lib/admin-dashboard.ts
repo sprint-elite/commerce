@@ -28,6 +28,42 @@ export type TopProductRow = {
   revenue: number;
 };
 
+export type ReworkMonthPoint = {
+  key: string;
+  label: string;
+  workCount: number;
+  commentCount: number;
+};
+
+export type ComplianceMonthPoint = {
+  key: string;
+  label: string;
+  shippedCount: number;
+  onTimeCount: number;
+  /** 해당 월 출하 기준 준수율. 출하 0건이면 null */
+  compliancePercent: number | null;
+};
+
+export type QualityMetrics = {
+  /** 고객 코멘트가 달린 작업 건수 / 전체 작업 건수 × 100 */
+  reworkRatePercent: number;
+  reworkOrderCount: number;
+  totalWorkOrderCount: number;
+  reworkGoalPercent: number;
+  reworkMonthly: ReworkMonthPoint[];
+  /**
+   * 납기 준수율(%).
+   * 납기 = 주문 등록 + 7일. 배송중(SHIPPED) 변경 시각이 납기 이전이면 준수.
+   */
+  deliveryCompliancePercent: number | null;
+  /** 납기 내 출하 건수 */
+  onTimeShipCount: number;
+  /** 출하(배송중) 판정에 포함된 건수 */
+  shippedSampleCount: number;
+  complianceGoalPercent: number;
+  complianceMonthly: ComplianceMonthPoint[];
+};
+
 export type AdminDashboardData = {
   summary: {
     todayOrders: number;
@@ -47,6 +83,7 @@ export type AdminDashboardData = {
     totalCustomers: number;
     totalCategories: number;
   };
+  quality: QualityMetrics;
   statusBreakdown: StatusBreakdown[];
   paymentBreakdown: PaymentBreakdown[];
   dailyTrend: DailyTrendPoint[];
@@ -81,6 +118,23 @@ function daysAgo(n: number) {
   return x;
 }
 
+function startOfMonthOffset(monthsAgo: number) {
+  const x = startOfMonth();
+  x.setMonth(x.getMonth() - monthsAgo);
+  return x;
+}
+
+function monthKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function monthLabel(key: string) {
+  const month = Number(key.slice(5, 7));
+  return `${month}월`;
+}
+
 function formatDayLabel(iso: string) {
   return new Date(iso).toLocaleDateString("ko-KR", {
     month: "numeric",
@@ -94,9 +148,8 @@ function isTodoOrder(o: {
   status: string;
   trackingNumber: string | null;
 }) {
-  if (o.paymentStatus === "UNPAID" && o.status !== "CANCELLED") return true;
-  if (o.status === "CONFIRMED") return true;
-  if (o.status === "SHIPPED" && !o.trackingNumber?.trim()) return true;
+  if (o.status === "PENDING" || o.status === "AWAITING_PAYMENT") return true;
+  if (o.status === "CONFIRMED" || o.status === "IN_PRODUCTION") return true;
   return false;
 }
 
@@ -136,6 +189,10 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     todoCandidates,
     trendRaw,
     topGrouped,
+    totalWorkOrderCount,
+    reworkOrderCount,
+    shippedLeadRows,
+    reworkChartOrders,
   ] = await Promise.all([
     prisma.order.count({
       where: { createdAt: { gte: today }, ...notCancelled },
@@ -161,10 +218,10 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     }),
     prisma.order.count(),
     prisma.order.count({
-      where: { paymentStatus: "UNPAID", ...notCancelled },
+      where: { status: { in: ["PENDING", "AWAITING_PAYMENT"] } },
     }),
     prisma.order.aggregate({
-      where: { paymentStatus: "UNPAID", ...notCancelled },
+      where: { status: { in: ["PENDING", "AWAITING_PAYMENT"] } },
       _sum: { totalPrice: true },
     }),
     prisma.order.count({ where: { status: "IN_PRODUCTION" } }),
@@ -189,9 +246,9 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     prisma.order.findMany({
       where: {
         OR: [
-          { paymentStatus: "UNPAID", status: { not: "CANCELLED" } },
+          { status: { in: ["PENDING", "AWAITING_PAYMENT"] } },
           { status: "CONFIRMED" },
-          { status: "SHIPPED", OR: [{ trackingNumber: null }, { trackingNumber: "" }] },
+          { status: "IN_PRODUCTION" },
         ],
       },
       orderBy: { createdAt: "asc" },
@@ -209,6 +266,50 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       _sum: { totalPrice: true },
       orderBy: { _count: { id: "desc" } },
       take: 5,
+    }),
+    /** 현재 등록된 작업 건수 (취소 제외) */
+    prisma.order.count({ where: notCancelled }),
+    /** 고객 코멘트가 1건 이상 달린 작업 건수 */
+    prisma.order.count({
+      where: {
+        ...notCancelled,
+        comments: {
+          some: {
+            user: { role: "CUSTOMER" },
+          },
+        },
+      },
+    }),
+    /** 출하·납기 준수 산출용 */
+    prisma.order.findMany({
+      where: {
+        ...notCancelled,
+        OR: [
+          { shippedAt: { not: null } },
+          { status: { in: ["SHIPPED", "DELIVERED"] } },
+        ],
+      },
+      select: {
+        createdAt: true,
+        shippedAt: true,
+        updatedAt: true,
+        status: true,
+      },
+    }),
+    /** 최근 6개월 재작업률 차트용 */
+    prisma.order.findMany({
+      where: {
+        ...notCancelled,
+        createdAt: { gte: startOfMonthOffset(5) },
+      },
+      select: {
+        createdAt: true,
+        comments: {
+          where: { user: { role: "CUSTOMER" } },
+          select: { id: true },
+          take: 1,
+        },
+      },
     }),
   ]);
 
@@ -259,6 +360,107 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
   const todoDtos = todoCandidates.map(toOrderDto).filter(isTodoOrder);
   const todoOrders = todoDtos.slice(0, 8);
 
+  const reworkRatePercent =
+    totalWorkOrderCount > 0
+      ? Math.round((reworkOrderCount / totalWorkOrderCount) * 1000) / 10
+      : 0;
+
+  const LEAD_DAYS = 7;
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+  const shippedSamples = shippedLeadRows
+    .map((row) => {
+      const shippedAt =
+        row.shippedAt ??
+        (row.status === "SHIPPED" || row.status === "DELIVERED"
+          ? row.updatedAt
+          : null);
+      if (!shippedAt) return null;
+      const dueAt = new Date(row.createdAt.getTime() + LEAD_DAYS * MS_PER_DAY);
+      return { shippedAt, dueAt };
+    })
+    .filter(
+      (row): row is { shippedAt: Date; dueAt: Date } => row != null,
+    );
+
+  const onTimeShipCount = shippedSamples.filter(
+    (row) => row.shippedAt.getTime() <= row.dueAt.getTime(),
+  ).length;
+
+  const deliveryCompliancePercent =
+    shippedSamples.length > 0
+      ? Math.round((onTimeShipCount / shippedSamples.length) * 1000) / 10
+      : null;
+
+  const monthKeys: string[] = [];
+  for (let i = 5; i >= 0; i--) {
+    monthKeys.push(monthKey(startOfMonthOffset(i)));
+  }
+
+  const reworkBuckets = new Map(
+    monthKeys.map((key) => [key, { workCount: 0, commentCount: 0 }]),
+  );
+  for (const row of reworkChartOrders) {
+    const key = monthKey(row.createdAt);
+    const bucket = reworkBuckets.get(key);
+    if (!bucket) continue;
+    bucket.workCount += 1;
+    if (row.comments.length > 0) bucket.commentCount += 1;
+  }
+  const reworkMonthly: ReworkMonthPoint[] = monthKeys.map((key) => {
+    const bucket = reworkBuckets.get(key)!;
+    return {
+      key,
+      label: monthLabel(key),
+      workCount: bucket.workCount,
+      commentCount: bucket.commentCount,
+    };
+  });
+
+  const complianceBuckets = new Map(
+    monthKeys.map((key) => [key, { shippedCount: 0, onTimeCount: 0 }]),
+  );
+  for (const row of shippedLeadRows) {
+    const shippedAt =
+      row.shippedAt ??
+      (row.status === "SHIPPED" || row.status === "DELIVERED"
+        ? row.updatedAt
+        : null);
+    if (!shippedAt) continue;
+    const key = monthKey(shippedAt);
+    const bucket = complianceBuckets.get(key);
+    if (!bucket) continue;
+    bucket.shippedCount += 1;
+    const dueAt = new Date(row.createdAt.getTime() + LEAD_DAYS * MS_PER_DAY);
+    if (shippedAt.getTime() <= dueAt.getTime()) bucket.onTimeCount += 1;
+  }
+  const complianceMonthly: ComplianceMonthPoint[] = monthKeys.map((key) => {
+    const bucket = complianceBuckets.get(key)!;
+    return {
+      key,
+      label: monthLabel(key),
+      shippedCount: bucket.shippedCount,
+      onTimeCount: bucket.onTimeCount,
+      compliancePercent:
+        bucket.shippedCount > 0
+          ? Math.round((bucket.onTimeCount / bucket.shippedCount) * 1000) / 10
+          : null,
+    };
+  });
+
+  const quality: QualityMetrics = {
+    reworkRatePercent,
+    reworkOrderCount,
+    totalWorkOrderCount,
+    reworkGoalPercent: 3,
+    reworkMonthly,
+    deliveryCompliancePercent,
+    onTimeShipCount,
+    shippedSampleCount: shippedSamples.length,
+    complianceGoalPercent: 95,
+    complianceMonthly,
+  };
+
   return {
     summary: {
       todayOrders,
@@ -278,6 +480,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       totalCustomers,
       totalCategories,
     },
+    quality,
     statusBreakdown: statusGroups.map((g) => ({
       status: g.status as OrderStatus,
       count: g._count.id,

@@ -1,18 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { HomeHeader } from "./HomeHeader";
 import { HomeFooter } from "./HomeFooter";
 import { HeroCarousel } from "./HeroCarousel";
 import { SectionHeader } from "./SectionHeader";
 import { ProductCard } from "./ProductCard";
-import { ReviewSlider } from "./ReviewSlider";
 import { QuickTemplateCard } from "./QuickTemplateCard";
-import type { HomeCatalogDto } from "@/lib/catalog";
+import type { HomeCatalogDto, HomeContentCardDto } from "@/lib/catalog";
 import {
   GUIDE_CARDS,
+  HOME_CASES_VIEW_ALL_URL,
   IDEA_BANNERS,
-  SHOW_HOME_REVIEWS_SECTION,
-  SHOW_HOME_NEW_AND_TRENDING_SECTIONS,
 } from "@/lib/home-data";
 
 interface HomePageProps {
@@ -37,9 +38,153 @@ const FALLBACK_GUIDE_GRADIENTS = [
   "from-stone-100 to-zinc-50",
 ];
 
+function IdeasSection({
+  ideas,
+}: {
+  ideas: {
+    title: string;
+    subtitle: string;
+    href: string;
+    gradient: string;
+    imageUrl?: string;
+  }[];
+}) {
+  return (
+    <section id="ideas" className="bg-white pb-4 pt-10 sm:pb-6 sm:pt-14">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <SectionHeader
+          title="이런 상황엔, 이런 굿즈"
+          subtitle="커플·행사·카페까지 활용 아이디어를 모아봤어요"
+          href={ideas[0]?.href ?? "/ideas/couple-ecobag"}
+          linkLabel="전체 보기"
+        />
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          {ideas.slice(0, 4).map((idea) =>
+            idea.imageUrl ? (
+              <Link
+                key={idea.title}
+                href={idea.href}
+                className="group relative aspect-[7/8] w-full overflow-hidden rounded-2xl transition-transform hover:scale-[1.02]"
+              >
+                <Image
+                  src={idea.imageUrl}
+                  alt={idea.title}
+                  fill
+                  className="object-cover object-[center_32%] transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width: 640px) 45vw, 280px"
+                />
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/50 to-transparent"
+                  aria-hidden
+                />
+                <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 pt-6 text-center sm:px-4 sm:pb-3.5">
+                  <p className="text-[13px] font-semibold leading-snug text-white sm:text-sm">
+                    {idea.title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-white/80">
+                    {idea.subtitle}
+                  </p>
+                </div>
+              </Link>
+            ) : (
+              <Link
+                key={idea.title}
+                href={idea.href}
+                className={`group flex aspect-[7/8] w-full flex-col items-center justify-center rounded-2xl bg-gradient-to-br ${idea.gradient} p-4 text-center transition-transform hover:scale-[1.02]`}
+              >
+                <p className="mt-2 text-sm font-bold text-zinc-900">
+                  {idea.title}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-600">{idea.subtitle}</p>
+              </Link>
+            ),
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CasesSection({ cases }: { cases: HomeContentCardDto[] }) {
+  const items = cases.slice(0, 4);
+  if (items.length === 0) return null;
+  return (
+    <section id="cases" className="bg-white py-14 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400 sm:text-[11px]">
+              Portfolio
+            </p>
+            <h2 className="mt-2 text-xl font-bold tracking-tight text-zinc-900 sm:mt-2.5 sm:text-2xl">
+              제작 사례
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              실제로 이렇게 만들어졌습니다.
+            </p>
+          </div>
+          <a
+            href={HOME_CASES_VIEW_ALL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-0.5 self-start text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 sm:self-auto"
+          >
+            사례 더보기
+            <ChevronRight className="h-4 w-4" strokeWidth={2} />
+          </a>
+        </div>
+
+        <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4 lg:gap-x-6">
+          {items.map((item) => (
+            <a
+              key={item.id}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block"
+            >
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-[1.125rem]">
+                {item.imageUrl ? (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    fill
+                    className="object-cover object-center transition duration-500 ease-out group-hover:scale-[1.03]"
+                    sizes="(max-width: 640px) 45vw, 280px"
+                  />
+                ) : (
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${item.gradient}`}
+                  />
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center gap-2.5 sm:mt-4 sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-bold leading-snug text-zinc-900 sm:text-base">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-600 sm:mt-2 sm:text-sm">
+                    {item.subtitle}
+                  </p>
+                </div>
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition duration-300 group-hover:border-zinc-900 group-hover:bg-zinc-900 group-hover:text-white sm:h-9 sm:w-9"
+                  aria-hidden
+                >
+                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} />
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function HomePage({ catalog }: HomePageProps) {
-  const { banners, best, newArrivals, trending, templates, allProducts, reviews } =
-    catalog;
+  const { banners, best, templates, cases } = catalog;
 
   const ideas =
     catalog.ideas.length > 0
@@ -73,8 +218,10 @@ export function HomePage({ catalog }: HomePageProps) {
         }))
       : GUIDE_CARDS.map((g) => ({ ...g }));
 
+  const ctaProduct = best[0];
+
   return (
-    <div className="min-h-screen bg-[#f8f9fa]">
+    <div className="min-h-screen bg-white">
       <HomeHeader />
 
       <main>
@@ -97,128 +244,28 @@ export function HomePage({ catalog }: HomePageProps) {
           </section>
         )}
 
-        <section id="products" className="bg-white py-10 sm:py-14">
+        {ideas.length > 0 ? <IdeasSection ideas={ideas} /> : null}
+
+        <section id="products" className="bg-white pb-10 pt-4 sm:pb-14 sm:pt-6">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <SectionHeader
-              title="재구매가 많은 상품들 모아봤어요"
-              subtitle="JH MAKER에서 가장 인기 있는 커스텀 상품"
-            />
-            <div className="mt-6 flex flex-wrap justify-start gap-x-3 gap-y-6 sm:gap-x-5">
-              {best.map((item) => (
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-8 sm:justify-start sm:gap-x-5">
+              {best.slice(0, 8).map((item) => (
                 <ProductCard key={item.id} item={item} variant="circle" />
               ))}
             </div>
           </div>
         </section>
 
-        {SHOW_HOME_REVIEWS_SECTION && reviews.length > 0 && (
-          <section
-            id="reviews"
-            className="border-y border-zinc-200 bg-zinc-50 py-10 sm:py-14"
-          >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6">
-              <SectionHeader
-                title="JH MAKER 실시간 리뷰"
-                subtitle="실제 제작 후기를 확인해 보세요"
-                href="/products/list"
-                linkLabel="상품 보러가기"
-              />
-              <div className="mt-6">
-                <ReviewSlider reviews={reviews} />
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section id="ideas" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
-          <SectionHeader
-            title="이런 상황엔, 이런 굿즈"
-            subtitle="커플·행사·카페까지 활용 아이디어를 모아봤어요"
-            href={ideas[0]?.href ?? "/ideas/couple-ecobag"}
-            linkLabel="소개 보기"
-          />
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            {ideas.map((idea) =>
-              idea.imageUrl ? (
-                <Link
-                  key={idea.title}
-                  href={idea.href}
-                  className="group relative aspect-[7/8] w-full overflow-hidden rounded-2xl transition-transform hover:scale-[1.02]"
-                >
-                  <Image
-                    src={idea.imageUrl}
-                    alt={idea.title}
-                    fill
-                    className="object-cover object-[center_32%] transition-transform duration-300 group-hover:scale-105"
-                    sizes="(max-width: 640px) 45vw, 280px"
-                  />
-                  <div
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/50 to-transparent"
-                    aria-hidden
-                  />
-                  <div className="absolute inset-x-0 bottom-0 z-10 px-3 pb-3 pt-6 text-center sm:px-4 sm:pb-3.5">
-                    <p className="text-[13px] font-semibold leading-snug text-white sm:text-sm">
-                      {idea.title}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-white/80">
-                      {idea.subtitle}
-                    </p>
-                  </div>
-                </Link>
-              ) : (
-                <Link
-                  key={idea.title}
-                  href={idea.href}
-                  className={`group flex aspect-[7/8] w-full flex-col items-center justify-center rounded-2xl bg-gradient-to-br ${idea.gradient} p-4 text-center transition-transform hover:scale-[1.02]`}
-                >
-                  <p className="mt-2 text-sm font-bold text-zinc-900">
-                    {idea.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-600">{idea.subtitle}</p>
-                </Link>
-              ),
-            )}
-          </div>
-        </section>
-
-        {SHOW_HOME_NEW_AND_TRENDING_SECTIONS && newArrivals.length > 0 && (
-          <section id="new" className="bg-white py-10 sm:py-14">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6">
-              <SectionHeader
-                title="새로운 상품이 도착했어요!"
-                subtitle="최근 추가된 커스텀 상품"
-              />
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
-                {newArrivals.map((item) => (
-                  <ProductCard key={item.id} item={item} compact />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {SHOW_HOME_NEW_AND_TRENDING_SECTIONS && trending.length > 0 && (
-          <section className="border-t border-zinc-200 bg-zinc-50 py-10 sm:py-14">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6">
-              <SectionHeader title="요즘 제일 많이 커스텀 해요" />
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-                {trending.map((item) => (
-                  <ProductCard key={`t-${item.id}`} item={item} />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        <CasesSection cases={cases} />
 
         <section
           id="guides"
-          className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14"
+          className="bg-white py-10 sm:py-14"
         >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <SectionHeader
             title="제작 가이드 & 활용 아이디어"
             subtitle="커스텀 전 꼭 알아두면 좋은 정보"
-            href={guides[0]?.href ?? "/guides/ecobag-guide"}
-            linkLabel="가이드 보기"
           />
           <div className="mt-6 flex gap-4 overflow-x-auto pb-2 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible">
             {guides.map((guide) => (
@@ -241,32 +288,8 @@ export function HomePage({ catalog }: HomePageProps) {
               </Link>
             ))}
           </div>
+          </div>
         </section>
-
-        {allProducts.length > 0 && (
-          <section
-            id="curated"
-            className="border-t border-zinc-200 bg-zinc-50 py-10 sm:py-14"
-          >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6">
-              <SectionHeader
-                title="JH MAKER가 엄선한 하이퀄리티 상품"
-                subtitle="JH MAKER 라인업에서 골라보세요"
-                href="/products/list"
-              />
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-                {allProducts.map((item) => (
-                  <ProductCard
-                    key={item.id}
-                    item={item}
-                    variant="shop"
-                    compact
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="mx-auto max-w-7xl px-4 pb-16 pt-4 sm:px-6">
           <div className="relative overflow-hidden rounded-3xl bg-zinc-900 px-8 py-14 text-center text-white sm:px-16">
@@ -280,7 +303,11 @@ export function HomePage({ catalog }: HomePageProps) {
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href={allProducts[0] ? `/products/${allProducts[0].slug}` : "/builder"}
+                  href={
+                    ctaProduct
+                      ? `/products/${ctaProduct.slug}`
+                      : "/builder"
+                  }
                   className="rounded-full bg-white px-10 py-3.5 text-sm font-bold text-zinc-900 shadow-lg hover:bg-zinc-100"
                 >
                   상품 선택하고 시작

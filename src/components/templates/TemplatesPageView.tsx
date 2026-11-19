@@ -3,7 +3,6 @@ import Link from "next/link";
 import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { PRODUCT_DISPLAY_IMAGES } from "@/lib/home-data";
-import { formatKRW } from "@/lib/pricing";
 import type { TemplateProductCard } from "@/lib/template-collections";
 
 export type TemplateGridCard = {
@@ -80,9 +79,6 @@ export function TemplatesPageView({
                           </div>
                           <p className="mt-2 line-clamp-2 text-[12px] font-medium leading-snug text-zinc-800 sm:text-[13px]">
                             {p.caption ?? p.name}
-                          </p>
-                          <p className="mt-0.5 text-[11px] tabular-nums text-zinc-500 sm:text-xs">
-                            {formatKRW(p.basePrice)} 부터
                           </p>
                         </Link>
                       </li>

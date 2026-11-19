@@ -5,8 +5,8 @@ import { HomeHeader } from "@/components/home/HomeHeader";
 import { RelatedIdeasSidebar } from "@/components/guides/RelatedIdeasSidebar";
 import type { GuideArticle } from "@/lib/guide-articles";
 import type { HomeContentCard } from "@/lib/content-article";
+import type { ContentArticleType } from "@/lib/content-article-types";
 import { PRODUCT_DISPLAY_IMAGES } from "@/lib/home-data";
-import { formatKRW } from "@/lib/pricing";
 import type { ProductType } from "@/types/builder";
 
 export type GuideProductCard = {
@@ -21,7 +21,7 @@ export type GuideProductCard = {
 
 interface GuideArticleViewProps {
   article: GuideArticle & {
-    type?: "GUIDE" | "IDEA";
+    type?: ContentArticleType;
     coverImageUrl?: string | null;
   };
   productsBySlug: Record<string, GuideProductCard>;
@@ -77,10 +77,6 @@ function ProductPickGrid({
                   {pick.caption ?? p.shortDesc}
                 </p>
               )}
-              <p className="mt-2 text-sm font-bold tabular-nums text-zinc-900">
-                {formatKRW(p.basePrice)}
-                <span className="text-xs font-medium text-zinc-400">~</span>
-              </p>
             </div>
           </Link>
         );
@@ -94,22 +90,39 @@ export function GuideArticleView({
   productsBySlug,
   relatedIdeas = [],
 }: GuideArticleViewProps) {
-  const kind = article.type === "IDEA" ? "IDEA" : "GUIDE";
-  const listHref = kind === "IDEA" ? "/templates" : "/#guides";
-  const listLabel = kind === "IDEA" ? "2분컷 템플릿" : "제작 가이드";
+  const kind =
+    article.type === "IDEA" || article.type === "CASE" ? article.type : "GUIDE";
+  const listHref =
+    kind === "IDEA" ? "/templates" : kind === "CASE" ? "/#cases" : "/#guides";
+  const listLabel =
+    kind === "IDEA"
+      ? "2분컷 템플릿"
+      : kind === "CASE"
+        ? "제작 사례"
+        : "제작 가이드";
   const showSidebar = kind === "IDEA" && relatedIdeas.length > 0;
+  const coverClass =
+    kind === "CASE" ? "object-contain p-8" : "object-cover";
 
   const articleBody = (
     <>
-      {kind === "IDEA" ? (
+      {kind === "IDEA" || kind === "CASE" ? (
         <>
+          {kind === "CASE" ? (
+            <Link
+              href={listHref}
+              className="mb-4 inline-block text-xs font-semibold leading-none tracking-wide text-zinc-400 hover:text-zinc-700"
+            >
+              {listLabel}
+            </Link>
+          ) : null}
           {article.coverImageUrl ? (
-            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-zinc-100">
+            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-zinc-50">
               <Image
                 src={article.coverImageUrl}
                 alt={article.title}
                 fill
-                className="object-cover"
+                className={coverClass}
                 sizes="(max-width: 1024px) 100vw, 720px"
                 priority
               />

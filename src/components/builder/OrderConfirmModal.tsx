@@ -1,24 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { ShippingAddressFields } from "@/components/checkout/ShippingAddressFields";
-import {
-  calculatePrice,
-  formatKRW,
-  FREE_SHIPPING_THRESHOLD,
-  resolveShippingFee,
-  SHIPPING_FEE,
-} from "@/lib/pricing";
 import { getProductTitle } from "@/lib/fabric/mockup-builder";
-import {
-  validateShippingInput,
-  type OrderShippingInput,
-} from "@/lib/order-shipping";
+import type { OrderShippingInput } from "@/lib/order-shipping";
 import {
   BAG_COLOR_LABELS,
-  BAG_SHAPE_LABELS,
-  CLOSURE_LABELS,
   HANDLE_LABELS,
   POCKET_LABELS,
   PRINT_SIDE_LABELS,
@@ -46,14 +33,6 @@ interface OrderConfirmModalProps {
   onConfirm: (shipping: OrderShippingInput) => void | Promise<void>;
 }
 
-const EMPTY_SHIPPING: OrderShippingInput = {
-  shippingName: "",
-  shippingPhone: "",
-  shippingAddress: "",
-  shippingZip: "",
-  notes: "",
-};
-
 export function OrderConfirmModal({
   open,
   data,
@@ -61,30 +40,13 @@ export function OrderConfirmModal({
   onClose,
   onConfirm,
 }: OrderConfirmModalProps) {
-  const [form, setForm] = useState<OrderShippingInput>(EMPTY_SHIPPING);
-  const [error, setError] = useState<string | null>(null);
-
-  const price = useMemo(
-    () => (data ? calculatePrice(data.options) : null),
-    [data],
-  );
-
-  const merchandise = data?.totalPrice ?? price?.totalPrice ?? 0;
-  const shippingFee = resolveShippingFee(merchandise, SHIPPING_FEE);
-  const payTotal = merchandise + shippingFee;
+  const [notes, setNotes] = useState("");
 
   const isUpdate = data?.mode === "update";
 
   useEffect(() => {
     if (open && data) {
-      setForm({
-        shippingName: data.initialShipping?.shippingName ?? "",
-        shippingPhone: data.initialShipping?.shippingPhone ?? "",
-        shippingAddress: data.initialShipping?.shippingAddress ?? "",
-        shippingZip: data.initialShipping?.shippingZip ?? "",
-        notes: data.initialShipping?.notes ?? "",
-      });
-      setError(null);
+      setNotes(data.initialShipping?.notes ?? "");
     }
   }, [open, data]);
 
@@ -94,23 +56,17 @@ export function OrderConfirmModal({
 
   const handleClose = () => {
     if (submitting) return;
-    setForm(EMPTY_SHIPPING);
-    setError(null);
+    setNotes("");
     onClose();
   };
 
   const handleSubmit = () => {
-    const validationError = validateShippingInput(form);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
     void onConfirm({
-      shippingName: form.shippingName.trim(),
-      shippingPhone: form.shippingPhone.trim(),
-      shippingAddress: form.shippingAddress.trim(),
-      shippingZip: form.shippingZip?.trim() || "",
-      notes: form.notes?.trim() || "",
+      shippingName: "",
+      shippingPhone: "",
+      shippingAddress: "",
+      shippingZip: "",
+      notes: notes.trim(),
     });
   };
 
@@ -154,14 +110,6 @@ export function OrderConfirmModal({
                   label="손잡이 끈 색상"
                   value={BAG_COLOR_LABELS[data.options.handleStrapColor]}
                 />
-                <SummaryRow
-                  label="단추"
-                  value={CLOSURE_LABELS[data.options.closureType]}
-                />
-                <SummaryRow
-                  label="에코백 형태"
-                  value={BAG_SHAPE_LABELS[data.options.bagShape]}
-                />
               </>
             )}
             <SummaryRow label="손잡이" value={HANDLE_LABELS[data.options.handle]} />
@@ -173,50 +121,19 @@ export function OrderConfirmModal({
             <SummaryRow label="수량" value={`${data.options.quantity}개`} />
           </div>
 
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between text-zinc-600">
-              <span>단가</span>
-              <span>{formatKRW(data.unitPrice)}</span>
-            </div>
-            {price && price.discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <span>수량 할인 ({Math.round(price.discountRate * 100)}%)</span>
-                <span>-{formatKRW(price.discountAmount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-zinc-600">
-              <span>배송비</span>
-              <span>
-                {shippingFee === 0 ? "무료" : formatKRW(shippingFee)}
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-zinc-100 pt-2 font-semibold text-zinc-900">
-              <span>결제 예정 금액</span>
-              <span>{formatKRW(payTotal)}</span>
-            </div>
-            <p className="text-[10px] text-zinc-400">
-              * {formatKRW(FREE_SHIPPING_THRESHOLD)} 이상 무료배송
-            </p>
+          <div className="space-y-2 border-t border-zinc-100 pt-4">
+            <label className="block text-sm font-semibold text-zinc-900">
+              요청사항
+              <textarea
+                value={notes}
+                disabled={submitting}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                placeholder="제작 시 전달할 내용이 있으면 적어 주세요"
+                className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm font-normal outline-none focus:border-zinc-400"
+              />
+            </label>
           </div>
-
-          <div className="space-y-3 border-t border-zinc-100 pt-4">
-            <p className="text-sm font-semibold text-zinc-900">배송 · 연락 정보</p>
-            <ShippingAddressFields
-              value={form}
-              onChange={(next) => {
-                setForm(next);
-                setError(null);
-              }}
-              disabled={submitting}
-              compact
-            />
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-600" role="alert">
-              {error}
-            </p>
-          )}
         </div>
 
         <div className="flex shrink-0 gap-2 border-t border-zinc-100 px-5 py-4">

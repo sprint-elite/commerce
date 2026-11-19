@@ -7,21 +7,14 @@ import { Menu, ShoppingBag, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { HeaderSearch } from "@/components/home/HeaderSearch";
 import { CartNavLink } from "@/components/cart/CartNavLink";
-import { TwoMinuteTemplateNavLink } from "@/components/home/TwoMinuteTemplateNavLink";
 import { PRODUCT_PAGE_CONTAINER } from "@/lib/product-layout";
 import {
   categoryNavHref,
   FALLBACK_PRODUCT_LIST_CATEGORIES,
 } from "@/lib/product-list";
-import { SHOW_HOME_REVIEWS_SECTION, SHOW_HOME_NEW_AND_TRENDING_SECTIONS } from "@/lib/home-data";
+import { SHOW_HOME_REVIEWS_SECTION } from "@/lib/home-data";
 
-const HOME_NAV = [
-  ...(SHOW_HOME_NEW_AND_TRENDING_SECTIONS
-    ? [{ label: "신상품", href: "/#new" as const }]
-    : []),
-  { label: "추천 디자인", href: "/#products" },
-  { label: "나만의 굿즈 만들기", href: "/builder" },
-];
+const HOME_NAV = [{ label: "나만의 굿즈 만들기", href: "/builder" }];
 
 const NAV_ITEMS = [
   ...(SHOW_HOME_REVIEWS_SECTION
@@ -138,9 +131,6 @@ function MobileNavPanel({
             {item.label}
           </Link>
         ))}
-        <div className="rounded-lg px-3 py-2.5">
-          <TwoMinuteTemplateNavLink onClick={onClose} />
-        </div>
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.label}
@@ -205,7 +195,7 @@ function ProductHeaderBar({
   return (
     <>
       <div
-        className={`flex h-14 items-center gap-3 border-b border-zinc-200 sm:h-16 sm:gap-4 ${containerClass}`}
+        className={`flex min-h-14 items-center gap-3 overflow-visible border-b border-zinc-200 pt-1.5 sm:min-h-16 sm:gap-4 sm:pt-2 ${containerClass}`}
       >
         <button
           type="button"
@@ -227,22 +217,23 @@ function ProductHeaderBar({
           <span className="hidden sm:inline">JH MAKER</span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-hide lg:flex">
-          {CATEGORY_NAV.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`shrink-0 px-2.5 py-2 text-sm transition ${
-                isCategoryNavActive(pathname, item.slug)
-                  ? "font-semibold text-zinc-900"
-                  : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-visible lg:flex">
+          <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-hide">
+            {CATEGORY_NAV.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`shrink-0 px-2.5 py-2 text-sm transition ${
+                  isCategoryNavActive(pathname, item.slug)
+                    ? "font-semibold text-zinc-900"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
           <span className="mx-1 h-4 w-px shrink-0 bg-zinc-200" />
-          <TwoMinuteTemplateNavLink className="px-2.5 py-2" />
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.label}
@@ -289,7 +280,7 @@ export function HomeHeader({ wide = false }: { wide?: boolean }) {
 
   if (wide) {
     return (
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
+      <header className="sticky top-0 z-50 overflow-visible bg-white shadow-sm">
         <ProductHeaderBar
           containerClass={containerClass}
           user={user}
@@ -302,11 +293,11 @@ export function HomeHeader({ wide = false }: { wide?: boolean }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm">
+    <header className="sticky top-0 z-50 overflow-visible bg-white shadow-sm">
       <div className="border-b border-zinc-100 bg-zinc-900 px-4 py-2 text-center text-xs text-zinc-300">
         <span className="font-semibold text-white">JH MAKER</span>
         <span className="mx-2 text-zinc-600">|</span>
-        커스텀 굿즈 1개부터 제작 · 3~5일 평균 출고 · 작업 코멘트 실시간 확인
+        커스텀 굿즈 1개부터 제작 · 평균 3~5일 · 작업 코멘트 실시간 확인
       </div>
 
       <div className={`flex h-16 items-center gap-4 ${containerClass}`}>
@@ -347,25 +338,25 @@ export function HomeHeader({ wide = false }: { wide?: boolean }) {
         />
       ) : null}
 
-      <nav className="hidden border-t border-zinc-100 lg:block">
-        <div className={`flex h-[52px] items-center ${containerClass}`}>
-          <div className="flex h-full items-center gap-1 overflow-x-auto scrollbar-hide">
+      <nav className="hidden overflow-visible border-t border-zinc-100 lg:block">
+        <div className={`flex min-h-[52px] items-center gap-1 py-1.5 ${containerClass}`}>
+          <div className="flex shrink-0 items-center gap-1">
             {HOME_NAV.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex h-full shrink-0 items-center px-3 text-sm font-semibold text-zinc-800 hover:text-rose-600"
+                className="flex shrink-0 items-center px-3 py-2 text-sm font-semibold text-zinc-800 hover:text-rose-600"
               >
                 {item.label}
               </Link>
             ))}
-            <span className="mx-2 h-4 w-px shrink-0 bg-zinc-200" />
-            <TwoMinuteTemplateNavLink className="px-3" />
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex h-full shrink-0 items-center px-3 text-sm font-semibold text-zinc-800 hover:text-rose-600"
+                className="flex shrink-0 items-center px-3 py-2 text-sm font-semibold text-zinc-800 hover:text-rose-600"
               >
                 {item.label}
               </Link>
@@ -375,7 +366,7 @@ export function HomeHeader({ wide = false }: { wide?: boolean }) {
               <Link
                 key={item.label}
                 href={item.href}
-                className={`flex h-full shrink-0 items-center px-3 text-sm transition ${
+                className={`flex shrink-0 items-center px-3 py-2 text-sm transition ${
                   isCategoryNavActive(pathname, item.slug)
                     ? "font-semibold text-zinc-900"
                     : "text-zinc-500 hover:text-zinc-900"

@@ -14,10 +14,6 @@ interface MyPageRecommendationsProps {
   products: CatalogProductDto[];
 }
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR").format(price);
-}
-
 export function MyPageRecommendations({ products }: MyPageRecommendationsProps) {
   if (products.length === 0) return null;
 
@@ -56,14 +52,6 @@ export function MyPageRecommendations({ products }: MyPageRecommendationsProps) 
               <p className="line-clamp-2 text-sm font-medium leading-snug text-zinc-900">
                 {item.name}
               </p>
-              <p className="mt-1.5 text-base font-bold text-zinc-900">
-                {formatPrice(item.basePrice)}원
-              </p>
-              {item.bulkLabel && (
-                <p className="mt-1 text-xs font-medium text-orange-500">
-                  {item.bulkLabel}
-                </p>
-              )}
             </div>
           </Link>
         ))}

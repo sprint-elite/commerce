@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
-import { calculateReadyMadePrice, SHIPPING_FEE } from "@/lib/pricing";
-import { parseProductOptionSchema } from "@/lib/product-option-schema";
+import { calculateReadyMadePrice } from "@/lib/pricing";
 import { generateOrderNumber, toOrderDto } from "@/lib/orders";
 import {
   normalizeShippingInput,
-  validateShippingInput,
 } from "@/lib/order-shipping";
 import { createSessionToken, sessionCookieOptions } from "@/lib/session";
-import { getSiteSettings } from "@/lib/site-settings";
 import {
   normalizeEmail,
   validateEmail,
-  validateName,
-  validatePhone,
 } from "@/lib/auth-validation";
 import {
   assertStockAvailable,
@@ -41,14 +36,8 @@ export async function POST(request: Request) {
     const emailError = validateEmail(email);
     if (emailError) return jsonError(emailError, 400);
 
-    const shippingError = validateShippingInput(body);
-    if (shippingError) return jsonError(shippingError, 400);
     const shipping = normalizeShippingInput(body);
-
-    const nameError = validateName(body.shippingName ?? "");
-    if (nameError) return jsonError(nameError, 400);
-    const phoneError = validatePhone(body.shippingPhone ?? "");
-    if (phoneError) return jsonError(phoneError, 400);
+    const guestName = email.split("@")[0]?.trim() || "게스트";
 
     const productSlug = body.productSlug?.trim();
     if (!productSlug) return jsonError("상품을 선택해 주세요.", 400);
@@ -84,21 +73,14 @@ export async function POST(request: Request) {
       basePrice: product.basePrice,
       quantityDiscounts: product.quantityDiscounts,
     });
-    const settings = await getSiteSettings();
-    const optionSchema = parseProductOptionSchema(product.optionSchema);
-    const baseShip = optionSchema?.shippingFee ?? settings.shippingFee ?? SHIPPING_FEE;
-    // free shipping threshold from settings
-    const shippingFee =
-      price.totalPrice >= settings.freeShippingThreshold
-        ? 0
-        : Math.max(0, baseShip);
+    const shippingFee = 0;
 
     const user =
       existingUser ??
       (await prisma.user.create({
         data: {
           email,
-          name: (body.shippingName ?? "게스트").trim(),
+          name: guestName,
           phone: body.shippingPhone?.trim() || null,
           passwordHash: null,
           isGuest: true,
@@ -110,8 +92,7 @@ export async function POST(request: Request) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          name: (body.shippingName ?? user.name).trim(),
-          phone: body.shippingPhone?.trim() || user.phone,
+          name: user.name.trim() || guestName,
         },
       });
     }
@@ -128,9 +109,9 @@ export async function POST(request: Request) {
           subtotal: price.subtotal,
           discountAmount: price.discountAmount,
           shippingFee,
-          totalPrice: price.totalPrice + shippingFee,
+          totalPrice: price.totalPrice,
           paymentStatus: "UNPAID",
-          status: "AWAITING_PAYMENT",
+          status: "PENDING",
           notes: shipping.notes,
           shippingName: shipping.shippingName,
           shippingPhone: shipping.shippingPhone,

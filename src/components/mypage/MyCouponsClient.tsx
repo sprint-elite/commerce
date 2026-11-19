@@ -96,7 +96,7 @@ export function MyCouponsClient({
         )}
       </ul>
       <p className="text-xs text-zinc-400">
-        * 등록한 쿠폰은 결제(체크아웃) 화면에서 바로 적용할 수 있습니다.
+        * 등록한 쿠폰은 마이페이지에서 확인할 수 있습니다.
       </p>
     </div>
   );

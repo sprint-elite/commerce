@@ -31,13 +31,8 @@ export function normalizeShippingInput(
   };
 }
 
-export function validateShippingInput(raw: Partial<OrderShippingInput>): string | null {
-  const name = raw.shippingName?.trim() ?? "";
-  const phone = raw.shippingPhone?.trim() ?? "";
-  const address = raw.shippingAddress?.trim() ?? "";
-
-  if (!name) return "고객명을 입력해 주세요.";
-  if (!phone) return "연락처를 입력해 주세요.";
-  if (!address) return "배송 주소를 입력해 주세요.";
+export function validateShippingInput(
+  _raw: Partial<OrderShippingInput>,
+): string | null {
   return null;
 }

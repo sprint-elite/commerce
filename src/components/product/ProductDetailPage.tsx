@@ -6,7 +6,6 @@ import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import type { ProductDetailDto } from "@/lib/catalog";
 import { toBuilderProductContext } from "@/lib/builder-product-context";
-import { formatKRW } from "@/lib/pricing";
 import { PRODUCT_PAGE_CONTAINER } from "@/lib/product-layout";
 import { ProductDetailSections } from "./ProductDetailSections";
 import { ReadyMadeProductView } from "./ReadyMadeProductView";
@@ -44,10 +43,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
                   {product.name}
                 </h1>
                 <p className="mt-0.5 text-xs text-zinc-500">
-                  {formatKRW(product.basePrice)}~
-                  <span className="ml-2 text-zinc-400">
-                    디자인 후 바로 주문 · 장바구니는 기성품 전용
-                  </span>
+                  디자인 후 바로 주문 · 장바구니는 기성품 전용
                 </p>
               </div>
               <WishlistButton productId={product.id} showLabel />

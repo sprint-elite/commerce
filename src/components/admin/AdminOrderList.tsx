@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/admin/OrderDetailModal";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
-import { PaymentStatusBadge } from "@/components/orders/PaymentStatusBadge";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_OPTIONS,
@@ -22,27 +21,18 @@ import type { Order, OrderStatus } from "@/types";
 const STATUS_FILTERS: { key: OrderStatus | "ALL"; label: string }[] = [
   { key: "ALL", label: "전체" },
   { key: "PENDING", label: "대기" },
-  { key: "AWAITING_PAYMENT", label: "입금대기" },
+  { key: "AWAITING_PAYMENT", label: "접수" },
   { key: "CONFIRMED", label: "확인됨" },
   { key: "IN_PRODUCTION", label: "제작 중" },
-  { key: "SHIPPED", label: "배송 중" },
-  { key: "DELIVERED", label: "완료" },
+  { key: "SHIPPED", label: "작업 완료" },
+  { key: "DELIVERED", label: "종료" },
   { key: "CANCELLED", label: "취소" },
 ];
 
 type SaleFilter = "ALL" | ProductSaleType;
-type PaymentFilter = "ALL" | "UNPAID" | "PAID";
 
 const filterSelectClass =
   "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400";
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ko-KR", {
@@ -54,9 +44,8 @@ function formatDate(iso: string) {
 }
 
 function isTodoOrder(o: Order) {
-  if (o.paymentStatus === "UNPAID" && o.status !== "CANCELLED") return true;
-  if (o.status === "CONFIRMED") return true;
-  if (o.status === "SHIPPED" && !o.trackingNumber?.trim()) return true;
+  if (o.status === "PENDING" || o.status === "AWAITING_PAYMENT") return true;
+  if (o.status === "CONFIRMED" || o.status === "IN_PRODUCTION") return true;
   return false;
 }
 
@@ -64,8 +53,6 @@ async function patchOrder(
   id: string,
   body: {
     status?: OrderStatus;
-    paymentStatus?: "PAID" | "UNPAID";
-    trackingNumber?: string | null;
   },
 ): Promise<Order> {
   const res = await fetch(`/api/admin/orders/${id}`, {
@@ -104,14 +91,10 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
   const [orderList, setOrderList] = useState(orders);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("ALL");
   const [saleFilter, setSaleFilter] = useState<SaleFilter>("ALL");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [trackingDraft, setTrackingDraft] = useState<Record<string, string>>(
-    {},
-  );
 
   useEffect(() => {
     setOrderList(orders);
@@ -131,10 +114,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
 
     return orderList
       .filter((o) => statusFilter === "ALL" || o.status === statusFilter)
-      .filter((o) => {
-        if (paymentFilter === "ALL") return true;
-        return o.paymentStatus === paymentFilter;
-      })
       .filter((o) => saleFilter === "ALL" || o.saleType === saleFilter)
       .filter((o) => {
         if (!q) return true;
@@ -151,7 +130,7 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-  }, [orderList, query, statusFilter, paymentFilter, saleFilter]);
+  }, [orderList, query, statusFilter, saleFilter]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { ALL: orderList.length };
@@ -179,13 +158,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
     }
   };
 
-  const saveTracking = (order: Order) => {
-    const draft = trackingDraft[order.id] ?? order.trackingNumber ?? "";
-    void runAction(order.id, () =>
-      patchOrder(order.id, { trackingNumber: draft.trim() || null }),
-    );
-  };
-
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-6">
@@ -193,7 +165,7 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
           주문 목록
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          입금 확인·상태·송장을 목록에서 바로 처리할 수 있습니다.
+          상태 변경을 목록에서 바로 처리할 수 있습니다.
         </p>
       </div>
 
@@ -216,18 +188,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-2.5 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-900/5"
                 />
               </div>
-              <select
-                value={paymentFilter}
-                onChange={(e) =>
-                  setPaymentFilter(e.target.value as PaymentFilter)
-                }
-                className={filterSelectClass}
-                aria-label="입금 상태"
-              >
-                <option value="ALL">입금 전체</option>
-                <option value="UNPAID">미입금</option>
-                <option value="PAID">입금완료</option>
-              </select>
               <select
                 value={saleFilter}
                 onChange={(e) => setSaleFilter(e.target.value as SaleFilter)}
@@ -293,10 +253,7 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                     <th className="px-3 py-3">구분</th>
                     <th className="px-3 py-3">고객</th>
                     <th className="px-3 py-3">상품</th>
-                    <th className="px-3 py-3">금액</th>
-                    <th className="px-3 py-3">입금</th>
                     <th className="px-3 py-3">상태</th>
-                    <th className="px-3 py-3">송장</th>
                     <th className="px-3 py-3">주문일</th>
                     <th className="px-3 py-3" />
                   </tr>
@@ -304,10 +261,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                 <tbody className="divide-y divide-slate-50">
                   {filteredOrders.map((order) => {
                     const busy = busyId === order.id;
-                    const tracking =
-                      trackingDraft[order.id] ??
-                      order.trackingNumber ??
-                      "";
                     return (
                       <tr
                         key={order.id}
@@ -332,10 +285,7 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                         </td>
                         <td className="px-3 py-3">
                           <p className="text-sm font-medium text-slate-800">
-                            {order.shippingName ?? order.customerName}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {order.shippingPhone ?? "-"}
+                            {order.customerName}
                           </p>
                         </td>
                         <td className="max-w-[160px] truncate px-3 py-3 text-slate-600">
@@ -343,68 +293,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                           <span className="ml-1 text-slate-400">
                             ×{order.quantity}
                           </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums text-slate-900">
-                          {formatPrice(order.totalPrice)}
-                        </td>
-                        <td
-                          className="px-3 py-3"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex flex-col gap-1">
-                            <PaymentStatusBadge status={order.paymentStatus} />
-                            {order.paymentStatus === "UNPAID" &&
-                              order.status !== "CANCELLED" && (
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void runAction(order.id, () =>
-                                      patchOrder(order.id, {
-                                        paymentStatus: "PAID",
-                                      }),
-                                    )
-                                  }
-                                  className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                                >
-                                  입금 확인
-                                </button>
-                              )}
-                            {order.paymentStatus === "PAID" && (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() =>
-                                  void runAction(order.id, async () => {
-                                    if (
-                                      !window.confirm(
-                                        "환불 처리할까요? (내부 상태만)",
-                                      )
-                                    ) {
-                                      return order;
-                                    }
-                                    const res = await fetch(
-                                      `/api/admin/orders/${order.id}/refund`,
-                                      { method: "POST" },
-                                    );
-                                    const data = (await res.json()) as {
-                                      order?: Order;
-                                      error?: string;
-                                    };
-                                    if (!res.ok || !data.order) {
-                                      throw new Error(
-                                        data.error ?? "환불 실패",
-                                      );
-                                    }
-                                    return data.order;
-                                  })
-                                }
-                                className="rounded-md border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
-                              >
-                                환불
-                              </button>
-                            )}
-                          </div>
                         </td>
                         <td
                           className="px-3 py-3"
@@ -417,10 +305,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                               void runAction(order.id, () =>
                                 patchOrder(order.id, {
                                   status: e.target.value as OrderStatus,
-                                  trackingNumber:
-                                    e.target.value === "SHIPPED"
-                                      ? tracking.trim() || undefined
-                                      : undefined,
                                 }),
                               )
                             }
@@ -432,35 +316,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                               </option>
                             ))}
                           </select>
-                        </td>
-                        <td
-                          className="px-3 py-3"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-center gap-1">
-                            <input
-                              value={tracking}
-                              onChange={(e) =>
-                                setTrackingDraft((prev) => ({
-                                  ...prev,
-                                  [order.id]: e.target.value,
-                                }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveTracking(order);
-                              }}
-                              placeholder="송장번호"
-                              className="w-28 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 placeholder:text-slate-500 outline-none focus:border-slate-400"
-                            />
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => saveTracking(order)}
-                              className="rounded-lg border border-slate-200 px-1.5 py-1 text-[10px] text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                            >
-                              저장
-                            </button>
-                          </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-slate-400">
                           {formatDate(order.createdAt)}
@@ -482,8 +337,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
             <div className="divide-y divide-slate-100 xl:hidden">
               {filteredOrders.map((order) => {
                 const busy = busyId === order.id;
-                const tracking =
-                  trackingDraft[order.id] ?? order.trackingNumber ?? "";
                 return (
                   <div key={order.id} className="px-4 py-4">
                     <button
@@ -500,10 +353,7 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                             ) : null}
                           </p>
                           <p className="mt-1 text-sm text-slate-700">
-                            {order.shippingName ?? order.customerName}
-                            <span className="ml-2 text-slate-400">
-                              {order.shippingPhone ?? ""}
-                            </span>
+                            {order.customerName}
                           </p>
                           <p className="mt-0.5 truncate text-sm text-slate-500">
                             {order.productName} ×{order.quantity}
@@ -514,32 +364,11 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                           <OrderStatusBadge status={order.status} />
                         </div>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-sm">
-                        <PaymentStatusBadge status={order.paymentStatus} />
-                        <span className="font-semibold text-slate-900">
-                          {formatPrice(order.totalPrice)}
-                        </span>
-                      </div>
                     </button>
                     <div
                       className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {order.paymentStatus === "UNPAID" &&
-                        order.status !== "CANCELLED" && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              void runAction(order.id, () =>
-                                patchOrder(order.id, { paymentStatus: "PAID" }),
-                              )
-                            }
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"
-                          >
-                            입금 확인
-                          </button>
-                        )}
                       <select
                         value={order.status}
                         disabled={busy}
@@ -547,10 +376,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                           void runAction(order.id, () =>
                             patchOrder(order.id, {
                               status: e.target.value as OrderStatus,
-                              trackingNumber:
-                                e.target.value === "SHIPPED"
-                                  ? tracking.trim() || undefined
-                                  : undefined,
                             }),
                           )
                         }
@@ -562,25 +387,6 @@ export function AdminOrderList({ orders }: AdminOrderListProps) {
                           </option>
                         ))}
                       </select>
-                      <input
-                        value={tracking}
-                        onChange={(e) =>
-                          setTrackingDraft((prev) => ({
-                            ...prev,
-                            [order.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="송장번호"
-                        className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 placeholder:text-slate-500"
-                      />
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => saveTracking(order)}
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
-                      >
-                        송장 저장
-                      </button>
                     </div>
                   </div>
                 );

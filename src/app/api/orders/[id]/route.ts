@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
-import { calculatePrice, resolveShippingFee, SHIPPING_FEE } from "@/lib/pricing";
+import { calculatePrice } from "@/lib/pricing";
 import { getProductTitle } from "@/lib/fabric/mockup-builder";
 import { fetchOrderDetailById, toOrderDto } from "@/lib/orders";
 import { parseBuilderPayload } from "@/lib/saved-design";
@@ -11,7 +11,6 @@ import {
   normalizeShippingInput,
   validateShippingInput,
 } from "@/lib/order-shipping";
-import { parseProductOptionSchema } from "@/lib/product-option-schema";
 import { resolveCatalogProduct } from "@/lib/resolve-product";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -91,9 +90,7 @@ export async function PUT(request: Request, context: RouteContext) {
       basePrice: product.basePrice,
       quantityDiscounts: product.quantityDiscounts,
     });
-    const optionSchema = parseProductOptionSchema(product.optionSchema);
-    const baseShipping = optionSchema?.shippingFee ?? SHIPPING_FEE;
-    const shippingFee = resolveShippingFee(price.totalPrice, baseShipping);
+    const shippingFee = 0;
     const productName = getProductTitle(payload.options);
 
     const order = await prisma.$transaction(async (tx) => {
@@ -143,7 +140,7 @@ export async function PUT(request: Request, context: RouteContext) {
           subtotal: price.subtotal,
           discountAmount: price.discountAmount,
           shippingFee,
-          totalPrice: price.totalPrice + shippingFee,
+          totalPrice: price.totalPrice,
           notes: shipping.notes,
           shippingName: shipping.shippingName,
           shippingPhone: shipping.shippingPhone,

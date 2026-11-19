@@ -3,8 +3,7 @@ import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleApiError, jsonError } from "@/lib/api-utils";
-import { calculatePrice, resolveShippingFee, SHIPPING_FEE } from "@/lib/pricing";
-import { parseProductOptionSchema } from "@/lib/product-option-schema";
+import { calculatePrice } from "@/lib/pricing";
 import { getProductTitle } from "@/lib/fabric/mockup-builder";
 import {
   fetchOrdersForAdmin,
@@ -13,6 +12,7 @@ import {
   toOrderDto,
 } from "@/lib/orders";
 import { parseBuilderPayload } from "@/lib/saved-design";
+import { earnPointsForOrder } from "@/lib/points";
 import {
   normalizeShippingInput,
   validateShippingInput,
@@ -73,9 +73,7 @@ export async function POST(request: Request) {
       basePrice: product.basePrice,
       quantityDiscounts: product.quantityDiscounts,
     });
-    const optionSchema = parseProductOptionSchema(product.optionSchema);
-    const baseShipping = optionSchema?.shippingFee ?? SHIPPING_FEE;
-    const shippingFee = resolveShippingFee(price.totalPrice, baseShipping);
+    const shippingFee = 0;
     const productName = getProductTitle(payload.options);
 
     const order = await prisma.$transaction(async (tx) => {
@@ -121,9 +119,9 @@ export async function POST(request: Request) {
           subtotal: price.subtotal,
           discountAmount: price.discountAmount,
           shippingFee,
-          totalPrice: price.totalPrice + shippingFee,
+          totalPrice: price.totalPrice,
           paymentStatus: "UNPAID",
-          status: "AWAITING_PAYMENT",
+          status: "PENDING",
           notes: shipping.notes,
           shippingName: shipping.shippingName,
           shippingPhone: shipping.shippingPhone,
@@ -144,6 +142,13 @@ export async function POST(request: Request) {
           items: true,
         },
       });
+    });
+
+    void earnPointsForOrder({
+      userId: order.userId,
+      orderId: order.id,
+      orderTotal: order.totalPrice,
+      orderNumber: order.orderNumber,
     });
 
     return NextResponse.json({ order: toOrderDto(order) }, { status: 201 });

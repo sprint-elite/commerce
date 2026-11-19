@@ -4,20 +4,20 @@ import type { User } from "@/types";
 interface MyPageSummaryBarProps {
   user: User;
   orderCount: number;
-  unpaidCount: number;
-  shippingCount: number;
+  receivedCount: number;
+  inProductionCount: number;
 }
 
 export function MyPageSummaryBar({
   user,
   orderCount,
-  unpaidCount,
-  shippingCount,
+  receivedCount,
+  inProductionCount,
 }: MyPageSummaryBarProps) {
   const stats = [
     { label: "전체 주문", value: `${orderCount}건` },
-    { label: "입금 대기", value: `${unpaidCount}건` },
-    { label: "배송 중", value: `${shippingCount}건` },
+    { label: "접수 중", value: `${receivedCount}건` },
+    { label: "제작 중", value: `${inProductionCount}건` },
   ];
 
   return (

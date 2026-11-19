@@ -70,7 +70,7 @@ export function ProductReviewForm({
     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
       <p className="text-sm font-semibold text-zinc-900">리뷰 작성</p>
       <p className="mt-1 text-xs text-zinc-500">
-        결제 완료한 상품만 작성할 수 있습니다.
+        주문한 상품만 작성할 수 있습니다.
       </p>
       <div className="mt-3 flex gap-1">
         {[1, 2, 3, 4, 5].map((n) => (

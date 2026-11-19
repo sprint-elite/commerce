@@ -95,7 +95,7 @@ export function AdminReturnManager() {
       type === "RETURN" &&
       nextStatus === "DONE" &&
       !window.confirm(
-        "반품 완료 시 재고 복구·주문 취소·환불(내부) 처리됩니다. 계속할까요?",
+        "반품 완료 시 재고 복구와 주문 취소가 함께 처리됩니다. 계속할까요?",
       )
     ) {
       return;
@@ -111,7 +111,7 @@ export function AdminReturnManager() {
   return (
     <AdminPageShell
       title="교환 · 반품"
-      description="반품을 완료로 바꾸면 재고 복구·주문 취소·내부 환불이 함께 처리됩니다. (교환은 상태만 변경)"
+      description="반품을 완료로 바꾸면 재고 복구와 주문 취소가 함께 처리됩니다. (교환은 상태만 변경)"
     >
       <AdminListCard>
         <AdminListToolbar

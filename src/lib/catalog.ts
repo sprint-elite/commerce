@@ -7,7 +7,7 @@ import {
   type ProductMockupFaceDto,
 } from "@/lib/product-mockup";
 import type { ProductType } from "@/types/builder";
-import { SLUG_TO_PRODUCT_TYPE } from "@/lib/home-data";
+import { HOME_CASE_STUDIES, SLUG_TO_PRODUCT_TYPE } from "@/lib/home-data";
 import { isBuilderType } from "@/lib/builder-types";
 import { parseNoticeJson } from "@/lib/inventory";
 import { fetchHomeContentCards } from "@/lib/content-article";
@@ -80,6 +80,7 @@ export type HomeCatalogDto = {
   banners: HomeBannerDto[];
   ideas: HomeContentCardDto[];
   guides: HomeContentCardDto[];
+  cases: HomeContentCardDto[];
   best: CatalogProductDto[];
   newArrivals: CatalogProductDto[];
   trending: CatalogProductDto[];
@@ -320,6 +321,16 @@ export async function fetchHomeCatalog(): Promise<HomeCatalogDto> {
   const banners: HomeBannerDto[] = bannerRows.map(toBannerDto);
   const ideas: HomeContentCardDto[] = ideaCards;
   const guides: HomeContentCardDto[] = guideCards;
+  const cases: HomeContentCardDto[] = HOME_CASE_STUDIES.map((item, index) => ({
+    id: `home-case-${index}`,
+    slug: item.id,
+    title: item.title,
+    subtitle: item.subtitle,
+    href: item.href,
+    imageUrl: item.imageUrl,
+    cardTag: null,
+    gradient: "from-zinc-100 to-stone-50",
+  }));
 
   const templates: HomeTemplateDto[] = templateRows
     .filter((t) => t.product)
@@ -362,6 +373,7 @@ export async function fetchHomeCatalog(): Promise<HomeCatalogDto> {
     banners,
     ideas,
     guides,
+    cases,
     best: best.length ? best : await fallbackProducts({ isFeatured: true }),
     newArrivals: newArrivals.length
       ? newArrivals
@@ -412,10 +424,18 @@ export type ProductDetailDto = {
   minQuantity: number;
   maxQuantity: number;
   stockQuantity: number | null;
+  thumbnailUrl: string | null;
+  images: Array<{
+    id: string;
+    url: string;
+    alt: string | null;
+    isPrimary: boolean;
+  }>;
   noticeItems: Array<{ label: string; value: string }>;
   ratingAvg: number;
   reviewCount: number;
   categoryName: string | null;
+  categorySlug: string | null;
   productType: ProductType;
   saleType: ProductSaleType;
   bulkLabel: string | null;
@@ -438,8 +458,9 @@ export async function fetchProductDetailBySlug(
   const product = await prisma.product.findFirst({
     where: { slug, isActive: true },
     include: {
-      category: { select: { name: true } },
+      category: { select: { name: true, slug: true } },
       quantityDiscounts: { orderBy: { minQuantity: "asc" } },
+      images: { orderBy: { sortOrder: "asc" } },
       detailSections: {
         where: { isActive: true },
         orderBy: [{ type: "asc" }, { sortOrder: "asc" }],
@@ -484,10 +505,18 @@ export async function fetchProductDetailBySlug(
     minQuantity: product.minQuantity,
     maxQuantity: product.maxQuantity,
     stockQuantity: product.stockQuantity,
+    thumbnailUrl: product.thumbnailUrl,
+    images: product.images.map((img) => ({
+      id: img.id,
+      url: img.url,
+      alt: img.alt,
+      isPrimary: img.isPrimary,
+    })),
     noticeItems: parseNoticeJson(product.noticeJson),
     ratingAvg: product.ratingAvg,
     reviewCount: product.reviewCount,
     categoryName: product.category?.name ?? null,
+    categorySlug: product.category?.slug ?? null,
     productType: resolveProductType(product.builderType, product.slug),
     saleType: product.saleType,
     bulkLabel,
